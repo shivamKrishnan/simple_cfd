@@ -77,6 +77,10 @@
             display: none;
         }
 
+        .section-container.hidden {
+            display: none;
+        }
+
         label {
             display: block;
             margin-bottom: 8px;
@@ -196,14 +200,18 @@
         }
     </style>
     <script>
-        // Function to toggle the visibility of the STL model input
-        function toggleSTLInput() {
+        // Function to toggle UI elements based on simulation type
+        function toggleSimulationMode() {
             const stlInput = document.getElementById('stlInput');
+            const objectPropertiesSection = document.getElementById('objectPropertiesSection');
             const simulationType = document.getElementById('simulationType').value;
+
             if (simulationType === '3D') {
                 stlInput.classList.remove('hidden');
+                objectPropertiesSection.classList.add('hidden');
             } else {
                 stlInput.classList.add('hidden');
+                objectPropertiesSection.classList.remove('hidden');
             }
         }
 
@@ -223,8 +231,11 @@
                 });
         }
 
-        // Fetch the summary when the page loads
-        window.onload = fetchSummary;
+        // Initialize page
+        window.onload = function () {
+            fetchSummary();
+            toggleSimulationMode(); // Set initial state
+        };
     </script>
 </head>
 
@@ -240,7 +251,7 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label for="simulationType">Dimension:</label>
-                    <select id="simulationType" name="simulationType" onchange="toggleSTLInput()" required>
+                    <select id="simulationType" name="simulationType" onchange="toggleSimulationMode()" required>
                         <option value="2D">2D Simulation</option>
                         <option value="3D">3D Simulation</option>
                     </select>
@@ -275,34 +286,36 @@
                 </div>
             </div>
 
-            <div class="section-title">Object Properties</div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="shape">Shape:</label>
-                    <select id="shape" name="shape">
-                        <option value="CIRCLE">Circle</option>
-                        <option value="SQUARE">Square</option>
-                        <option value="AIRFOIL">Airfoil</option>
-                        <option value="CAR">Car</option>
-                        <option value="DIAMOND">Diamond</option>
-                        <option value="TRIANGLE">Triangle</option>
-                        <option value="ELLIPSE">Ellipse</option>
-                        <option value="ROUNDED_RECTANGLE">Rounded Rectangle</option>
-                        <option value="STAR">Star</option>
-                        <option value="HEXAGON">Hexagon</option>
-                        <option value="CRESCENT">Crescent</option>
-                        <option value="HEART">Heart</option>
-                        <option value="CROSS">Cross</option>
-                        <option value="TRAPEZOID">Trapezoid</option>
-                        <option value="PARABOLA">Parabola</option>
-                        <option value="POLYGON">Polygon</option>
-                    </select>
-                </div>
+            <div id="objectPropertiesSection" class="section-container">
+                <div class="section-title">Object Properties</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="shape">Shape:</label>
+                        <select id="shape" name="shape">
+                            <option value="CIRCLE">Circle</option>
+                            <option value="SQUARE">Square</option>
+                            <option value="AIRFOIL">Airfoil</option>
+                            <option value="CAR">Car</option>
+                            <option value="DIAMOND">Diamond</option>
+                            <option value="TRIANGLE">Triangle</option>
+                            <option value="ELLIPSE">Ellipse</option>
+                            <option value="ROUNDED_RECTANGLE">Rounded Rectangle</option>
+                            <option value="STAR">Star</option>
+                            <option value="HEXAGON">Hexagon</option>
+                            <option value="CRESCENT">Crescent</option>
+                            <option value="HEART">Heart</option>
+                            <option value="CROSS">Cross</option>
+                            <option value="TRAPEZOID">Trapezoid</option>
+                            <option value="PARABOLA">Parabola</option>
+                            <option value="POLYGON">Polygon</option>
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label for="shapeRadius">Shape Radius/Size:</label>
-                    <input type="number" id="shapeRadius" name="shapeRadius" step="0.1" placeholder="e.g., 1.0"
-                        required>
+                    <div class="form-group">
+                        <label for="shapeRadius">Shape Radius/Size:</label>
+                        <input type="number" id="shapeRadius" name="shapeRadius" step="0.1" placeholder="e.g., 1.0"
+                            required>
+                    </div>
                 </div>
             </div>
 
