@@ -20,7 +20,7 @@ Before running the project, ensure you have the following installed:
 1. **Python 3.x**: Required for the Flask backend.
 2. **Flask**: Install using `pip install flask`.
 3. **C++ Compiler**: Ensure `g++` is installed to compile the C++ code.
-4. **OpenMP**: Required for parallelization in the C++ code.
+4. **OpenMP**: Required for parallelization in the C++ code (can check by running openmp_check.cpp).
 
 ---
 
@@ -28,8 +28,8 @@ Before running the project, ensure you have the following installed:
 
 1. **Clone the Repository**:
    ```bash
-   git clone <repository-url>
-   cd <repository-folder>
+   git clone <https://github.com/shivamKrishnan/simple_cfd.git>
+   cd <simple_cfd>
    ```
 
 2. **Install Dependencies**:
@@ -42,7 +42,7 @@ Before running the project, ensure you have the following installed:
    Ensure your project directory looks like this:
    ```
    project/
-   ├── navier_stokes_extra_shapes.cpp  # C++ simulation code
+   ├── navier_stokes_2d.cpp  # C++ simulation code
    ├── server.py                       # Flask backend
    ├── templates/
    │   └── index.html                  # HTML form
@@ -54,7 +54,7 @@ Before running the project, ensure you have the following installed:
 4. **Compile the C++ Code**:
    The Flask backend will automatically compile the C++ code, but you can manually compile it using:
    ```bash
-   g++ -fopenmp navier_stokes_extra_shapes.cpp -o navier_stokes -O2
+   g++ -fopenmp navier_stokes_2d.cpp -o navier_stokes -O2
    ```
 
 ---
@@ -130,7 +130,7 @@ The simulation generates the following files:
 To modify the simulation (e.g., add new shapes or change the domain size), edit the following files:
 
 1. **C++ Code**:
-   - `navier_stokes_extra_shapes.cpp`: Modify the `setupMask()` function to add new shapes or change the simulation logic.
+   - `navier_stokes_2d.cpp`: Modify the `setupMask()` function to add new shapes or change the simulation logic.
 
 2. **Web Interface**:
    - `templates/index.html`: Modify the HTML form to add new input fields or change the layout.
