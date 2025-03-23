@@ -3,7 +3,7 @@ venv/
 __pycache__/
 
 # Compiled binaries
-navier_stokes
+navier_stokes.exe
 *.o
 *.out
 
