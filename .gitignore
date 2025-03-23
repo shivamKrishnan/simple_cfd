@@ -1,0 +1,19 @@
+# Virtual environment
+venv/
+__pycache__/
+
+# Compiled binaries
+navier_stokes
+*.o
+*.out
+
+# Output and logs
+output/
+simulation_results.zip
+
+# System files
+.DS_Store
+Thumbs.db
+
+#testing files
+testing.txt

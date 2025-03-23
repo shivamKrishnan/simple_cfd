@@ -32,17 +32,33 @@ Before running the project, ensure you have the following installed:
    cd <simple_cfd>
    ```
 
-2. **Install Dependencies**:
-   Install Flask (if not already installed):
+ 2. Create and Activate a Virtual Environment
+   It is recommended to use a Python virtual environment (`venv`) to isolate dependencies.
+   
+   - **On Windows**:
+     ```bash
+     python -m venv venv
+     venv\Scripts\activate
+     ```
+
+   - **On Linux/macOS**:
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
+
+3. Install Dependencies
+   Install Flask and any required dependencies inside the virtual environment:
    ```bash
    pip install flask
    ```
 
-3. **Directory Structure**:
+4. Directory Structure
    Ensure your project directory looks like this:
    ```
    project/
-   ├── navier_stokes_2d.cpp  # C++ simulation code
+   ├── venv/                           # Virtual environment (optional)
+   ├── navier_stokes_extra_shapes.cpp  # C++ simulation code
    ├── server.py                       # Flask backend
    ├── templates/
    │   └── index.html                  # HTML form
@@ -51,10 +67,10 @@ Before running the project, ensure you have the following installed:
    └── simulation_results.zip          # Generated zip file
    ```
 
-4. **Compile the C++ Code**:
+5. Compile the C++ Code
    The Flask backend will automatically compile the C++ code, but you can manually compile it using:
    ```bash
-   g++ -fopenmp navier_stokes_2d.cpp -o navier_stokes -O2
+   g++ -fopenmp navier_stokes_extra_shapes.cpp -o navier_stokes -O2
    ```
 
 ---
