@@ -5,41 +5,265 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Navier-Stokes Simulation</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-color);
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+
+        .simulation-form {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0 0 8px 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        /* Styling for placeholder text */
+        input::placeholder {
+            color: #aaa;
+            font-style: italic;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 1em;
+        }
+
+        .shape-select {
+            grid-column: span 2;
+        }
+
+        .submit-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: var(--shadow);
+        }
+
+        button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            color: var(--secondary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 8px;
+            margin: 20px 0;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .shape-select {
+                grid-column: span 1;
+            }
+
+            header {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Navier-Stokes Simulation</h1>
-    <form action="/run_simulation" method="post">
-        <label for="nx">Grid Resolution X:</label>
-        <input type="number" id="nx" name="nx" required><br><br>
+    <div class="container">
+        <header>
+            <h1>Navier-Stokes Simulation</h1>
+            <div class="subtitle">Fluid Dynamics Visualization Tool</div>
+        </header>
 
-        <label for="ny">Grid Resolution Y:</label>
-        <input type="number" id="ny" name="ny" required><br><br>
+        <form class="simulation-form" action="/run_simulation" method="post">
+            <div class="section-title">Domain Configuration</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="domainX">Domain Size X:</label>
+                    <input type="number" id="domainX" name="domainX" step="0.1" placeholder="e.g., 10.0" required>
+                </div>
 
-        <label for="reynolds">Reynolds Number:</label>
-        <input type="number" id="reynolds" name="reynolds" step="0.1" required><br><br>
+                <div class="form-group">
+                    <label for="domainY">Domain Size Y:</label>
+                    <input type="number" id="domainY" name="domainY" step="0.1" placeholder="e.g., 10.0" required>
+                </div>
 
-        <label for="dt">Time Step:</label>
-        <input type="number" id="dt" name="dt" step="0.001" required><br><br>
+                <div class="form-group">
+                    <label for="nx">Grid Resolution X:</label>
+                    <input type="number" id="nx" name="nx" placeholder="e.g., 100" required>
+                </div>
 
-        <label for="num_steps">Number of Steps:</label>
-        <input type="number" id="num_steps" name="num_steps" required><br><br>
+                <div class="form-group">
+                    <label for="ny">Grid Resolution Y:</label>
+                    <input type="number" id="ny" name="ny" placeholder="e.g., 100" required>
+                </div>
+            </div>
 
-        <label for="plot_interval">Plot Interval:</label>
-        <input type="number" id="plot_interval" name="plot_interval" required><br><br>
+            <div class="section-title">Object Properties</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="shape">Shape:</label>
+                    <select id="shape" name="shape">
+                        <option value="CIRCLE">Circle</option>
+                        <option value="SQUARE">Square</option>
+                        <option value="AIRFOIL">Airfoil</option>
+                        <option value="CAR">Car</option>
+                        <option value="DIAMOND">Diamond</option>
+                        <option value="TRIANGLE">Triangle</option>
+                        <option value="ELLIPSE">Ellipse</option>
+                        <option value="ROUNDED_RECTANGLE">Rounded Rectangle</option>
+                        <option value="STAR">Star</option>
+                        <option value="HEXAGON">Hexagon</option>
+                        <option value="CRESCENT">Crescent</option>
+                        <option value="HEART">Heart</option>
+                        <option value="CROSS">Cross</option>
+                        <option value="TRAPEZOID">Trapezoid</option>
+                        <option value="PARABOLA">Parabola</option>
+                        <option value="POLYGON">Polygon</option>
+                    </select>
+                </div>
 
-        <label for="shape">Shape:</label>
-        <select id="shape" name="shape">
-            <option value="CIRCLE">Circle</option>
-            <option value="SQUARE">Square</option>
-            <option value="AIRFOIL">Airfoil</option>
-            <option value="CAR">Car</option>
-            <option value="DIAMOND">Diamond</option>
-            <option value="TRIANGLE">Triangle</option>
-        </select><br><br>
+                <div class="form-group">
+                    <label for="shapeRadius">Shape Radius/Size:</label>
+                    <input type="number" id="shapeRadius" name="shapeRadius" step="0.1" placeholder="e.g., 1.0"
+                        required>
+                </div>
+            </div>
 
-        <button type="submit">Run Simulation</button>
-    </form>
+            <div class="section-title">Simulation Parameters</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="reynolds">Reynolds Number:</label>
+                    <input type="number" id="reynolds" name="reynolds" step="0.1" placeholder="e.g., 100.0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="dt">Time Step (dt):</label>
+                    <input type="number" id="dt" name="dt" step="0.001" placeholder="e.g., 0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="num_steps">Number of Steps:</label>
+                    <input type="number" id="num_steps" name="num_steps" placeholder="e.g., 1000" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="plot_interval">Plot Interval:</label>
+                    <input type="number" id="plot_interval" name="plot_interval" placeholder="e.g., 20" required>
+                </div>
+            </div>
+
+            <div class="submit-container">
+                <button type="submit">Run Simulation</button>
+            </div>
+        </form>
+
+        <footer>
+            <p>Computational Fluid Dynamics Simulator &copy; 2025</p>
+        </footer>
+    </div>
 </body>
 
 </html>

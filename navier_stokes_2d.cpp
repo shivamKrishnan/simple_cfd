@@ -897,96 +897,68 @@ void generateOverallSummary(int numSteps, double totalTime, double finalDragCoef
 
 int main(int argc, char *argv[])
 {
-    // Get number of threads from command line or use default
-    int num_threads = 4; // Default value
-    if (argc > 1)
+    // Read input parameters from input_params.txt
+    std::ifstream input_file("input_params.txt");
+    if (!input_file.is_open())
     {
-        num_threads = std::atoi(argv[1]);
-    }
-
-    // Set number of OpenMP threads
-    omp_set_num_threads(num_threads);
-    std::cout << "Running with " << num_threads << " threads" << std::endl;
-
-    // Display available shapes
-    displayShapes();
-
-    // Get user's shape choice
-    int shapeChoice;
-    std::cout << "Select a shape (1-16): ";
-    std::cin >> shapeChoice;
-
-    // Validate shape choice
-    if (shapeChoice < 1 || shapeChoice > 16)
-    {
-        std::cerr << "Invalid shape choice. Exiting." << std::endl;
+        std::cerr << "Error: Could not open input_params.txt" << std::endl;
         return 1;
     }
 
-    // Map shape choice to enum
-    NavierStokesSolver::Shape shape;
-    switch (shapeChoice)
-    {
-    case 1:
-        shape = NavierStokesSolver::CIRCLE;
-        break;
-    case 2:
-        shape = NavierStokesSolver::SQUARE;
-        break;
-    case 3:
-        shape = NavierStokesSolver::AIRFOIL;
-        break;
-    case 4:
-        shape = NavierStokesSolver::CAR;
-        break;
-    case 5:
-        shape = NavierStokesSolver::DIAMOND;
-        break;
-    case 6:
-        shape = NavierStokesSolver::TRIANGLE;
-        break;
-    case 7:
-        shape = NavierStokesSolver::ELLIPSE;
-        break;
-    case 8:
-        shape = NavierStokesSolver::ROUNDED_RECTANGLE;
-        break;
-    case 9:
-        shape = NavierStokesSolver::STAR;
-        break;
-    case 10:
-        shape = NavierStokesSolver::HEXAGON;
-        break;
-    case 11:
-        shape = NavierStokesSolver::CRESCENT;
-        break;
-    case 12:
-        shape = NavierStokesSolver::HEART;
-        break;
-    case 13:
-        shape = NavierStokesSolver::CROSS;
-        break;
-    case 14:
-        shape = NavierStokesSolver::TRAPEZOID;
-        break;
-    case 15:
-        shape = NavierStokesSolver::PARABOLA;
-        break;
-    case 16:
-        shape = NavierStokesSolver::POLYGON;
-        break;
-    default:
-        shape = NavierStokesSolver::CIRCLE; // Default to circle
-        break;
-    }
-
-    // Get simulation parameters from the user
     double domainX, domainY, shapeRadius, reynolds, dt;
     int nx, ny, numSteps, plotInterval;
-    getUserInput(domainX, domainY, shapeRadius, nx, ny, reynolds, dt, numSteps, plotInterval);
+    std::string shapeStr;
 
-    // Display user settings in the console
-    displayUserSettings(shapeChoice, domainX, domainY, shapeRadius, nx, ny, reynolds, dt, numSteps, plotInterval);
+    input_file >> domainX >> domainY;
+    input_file >> shapeRadius;
+    input_file >> nx >> ny;
+    input_file >> reynolds;
+    input_file >> dt;
+    input_file >> numSteps;
+    input_file >> plotInterval;
+    input_file >> shapeStr;
+
+    input_file.close();
+
+    // Map shape string to enum
+    NavierStokesSolver::Shape shape;
+    if (shapeStr == "CIRCLE")
+        shape = NavierStokesSolver::CIRCLE;
+    else if (shapeStr == "SQUARE")
+        shape = NavierStokesSolver::SQUARE;
+    else if (shapeStr == "AIRFOIL")
+        shape = NavierStokesSolver::AIRFOIL;
+    else if (shapeStr == "CAR")
+        shape = NavierStokesSolver::CAR;
+    else if (shapeStr == "DIAMOND")
+        shape = NavierStokesSolver::DIAMOND;
+    else if (shapeStr == "TRIANGLE")
+        shape = NavierStokesSolver::TRIANGLE;
+    else if (shapeStr == "ELLIPSE")
+        shape = NavierStokesSolver::ELLIPSE;
+    else if (shapeStr == "ROUNDED_RECTANGLE")
+        shape = NavierStokesSolver::ROUNDED_RECTANGLE;
+    else if (shapeStr == "STAR")
+        shape = NavierStokesSolver::STAR;
+    else if (shapeStr == "HEXAGON")
+        shape = NavierStokesSolver::HEXAGON;
+    else if (shapeStr == "CRESCENT")
+        shape = NavierStokesSolver::CRESCENT;
+    else if (shapeStr == "HEART")
+        shape = NavierStokesSolver::HEART;
+    else if (shapeStr == "CROSS")
+        shape = NavierStokesSolver::CROSS;
+    else if (shapeStr == "TRAPEZOID")
+        shape = NavierStokesSolver::TRAPEZOID;
+    else if (shapeStr == "PARABOLA")
+        shape = NavierStokesSolver::PARABOLA;
+    else if (shapeStr == "POLYGON")
+        shape = NavierStokesSolver::POLYGON;
+    else
+    {
+        std::cerr << "Invalid shape in input_params.txt" << std::endl;
+        return 1;
+    }
 
     // Define shape center (1/4 of the domain from the left, middle vertically)
     std::pair<double, double> shapeCenter = {domainX / 4, domainY / 2};

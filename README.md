@@ -58,7 +58,7 @@ Before running the project, ensure you have the following installed:
    ```
    project/
    ├── venv/                           # Virtual environment (optional)
-   ├── navier_stokes_extra_shapes.cpp  # C++ simulation code
+   ├── navier_stokes_2d.cpp  # C++ simulation code
    ├── server.py                       # Flask backend
    ├── templates/
    │   └── index.html                  # HTML form
