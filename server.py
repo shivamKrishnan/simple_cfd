@@ -1,8 +1,8 @@
-from flask import Flask, request, send_file, render_template
+from flask import Flask, request, send_file, render_template, jsonify
 import subprocess
 import os
 import zipfile
-import shutil  # Import shutil for directory operations
+import shutil
 
 app = Flask(__name__)
 
@@ -13,6 +13,7 @@ def index():
 @app.route("/run_simulation", methods=["POST"])
 def run_simulation():
     # Get user inputs from the form
+    simulation_type = request.form["simulationType"]
     domainX = float(request.form["domainX"])
     domainY = float(request.form["domainY"])
     shapeRadius = float(request.form["shapeRadius"])
@@ -23,6 +24,12 @@ def run_simulation():
     num_steps = int(request.form["num_steps"])
     plot_interval = int(request.form["plot_interval"])
     shape = request.form["shape"]
+
+    # Handle STL file upload for 3D simulations
+    if simulation_type == "3D":
+        stl_file = request.files["stlFile"]
+        if stl_file:
+            stl_file.save("input.stl")  # Save the uploaded STL file
 
     # Write input parameters to input_params.txt
     with open("input_params.txt", "w") as f:
@@ -38,8 +45,8 @@ def run_simulation():
     # Clear the output directory before running the simulation
     output_dir = "output"
     if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)  # Remove the entire directory
-    os.makedirs(output_dir)  # Recreate the directory
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir)
 
     # Run the C++ simulation
     try:
@@ -59,12 +66,15 @@ def run_simulation():
     # Provide the zip file for download
     return send_file(zip_filename, as_attachment=True)
 
-def create_blank_input_params():
-    # Create a blank input_params.txt file if it doesn't exist
-    if not os.path.exists("input_params.txt"):
-        open("input_params.txt", "w").close()
+@app.route("/get_summary")
+def get_summary():
+    # Read and return the contents of overall_summary.txt
+    try:
+        with open("output/overall_summary.txt", "r") as f:
+            summary = f.read()
+        return summary
+    except FileNotFoundError:
+        return "Summary not available.", 404
 
 if __name__ == "__main__":
-    # Create a blank input_params.txt if it doesn't exist
-    create_blank_input_params()
     app.run(debug=True)
