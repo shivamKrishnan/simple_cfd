@@ -59,5 +59,12 @@ def run_simulation():
     # Provide the zip file for download
     return send_file(zip_filename, as_attachment=True)
 
+def create_blank_input_params():
+    # Create a blank input_params.txt file if it doesn't exist
+    if not os.path.exists("input_params.txt"):
+        open("input_params.txt", "w").close()
+
 if __name__ == "__main__":
+    # Create a blank input_params.txt if it doesn't exist
+    create_blank_input_params()
     app.run(debug=True)
