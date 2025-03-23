@@ -28,8 +28,8 @@ Before running the project, ensure you have the following installed:
 
 1. **Clone the Repository**:
    ```bash
-   git clone <https://github.com/shivamKrishnan/simple_cfd.git>
-   cd <simple_cfd>
+   git clone https://github.com/shivamKrishnan/simple_cfd.git
+   cd simple_cfd
    ```
 
  2. Create and Activate a Virtual Environment
