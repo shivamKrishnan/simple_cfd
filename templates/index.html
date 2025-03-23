@@ -44,6 +44,12 @@
             font-size: 2.5rem;
         }
 
+        h2 {
+            color: var(--secondary-color);
+            margin-top: 30px;
+            font-size: 1.8rem;
+        }
+
         .subtitle {
             font-size: 1.1rem;
             margin-top: 10px;
@@ -65,6 +71,10 @@
 
         .form-group {
             margin-bottom: 20px;
+        }
+
+        .form-group.hidden {
+            display: none;
         }
 
         label {
@@ -91,10 +101,13 @@
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
-        /* Styling for placeholder text */
         input::placeholder {
             color: #aaa;
             font-style: italic;
+        }
+
+        input[type="file"] {
+            padding: 8px;
         }
 
         select {
@@ -103,10 +116,6 @@
             background-repeat: no-repeat;
             background-position: right 10px center;
             background-size: 1em;
-        }
-
-        .shape-select {
-            grid-column: span 2;
         }
 
         .submit-container {
@@ -143,9 +152,31 @@
             margin: 20px 0;
         }
 
+        #summary {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: 'Consolas', monospace;
+            line-height: 1.5;
+            max-height: 300px;
+            overflow-y: auto;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-style: italic;
+        }
+
         footer {
             text-align: center;
             margin-top: 20px;
+            padding: 10px;
             font-size: 0.9rem;
             color: #666;
         }
@@ -153,10 +184,6 @@
         @media (max-width: 600px) {
             .form-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .shape-select {
-                grid-column: span 1;
             }
 
             header {
@@ -168,6 +195,37 @@
             }
         }
     </style>
+    <script>
+        // Function to toggle the visibility of the STL model input
+        function toggleSTLInput() {
+            const stlInput = document.getElementById('stlInput');
+            const simulationType = document.getElementById('simulationType').value;
+            if (simulationType === '3D') {
+                stlInput.classList.remove('hidden');
+            } else {
+                stlInput.classList.add('hidden');
+            }
+        }
+
+        // Function to fetch and display the overall summary
+        function fetchSummary() {
+            const summaryElement = document.getElementById('summary');
+            summaryElement.innerHTML = '<div class="loading">Loading summary data...</div>';
+
+            fetch('/get_summary')
+                .then(response => response.text())
+                .then(data => {
+                    summaryElement.textContent = data;
+                })
+                .catch(error => {
+                    console.error('Error fetching summary:', error);
+                    summaryElement.textContent = 'Failed to load summary. Please try again later.';
+                });
+        }
+
+        // Fetch the summary when the page loads
+        window.onload = fetchSummary;
+    </script>
 </head>
 
 <body>
@@ -177,7 +235,23 @@
             <div class="subtitle">Fluid Dynamics Visualization Tool</div>
         </header>
 
-        <form class="simulation-form" action="/run_simulation" method="post">
+        <form class="simulation-form" action="/run_simulation" method="post" enctype="multipart/form-data">
+            <div class="section-title">Simulation Type</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="simulationType">Dimension:</label>
+                    <select id="simulationType" name="simulationType" onchange="toggleSTLInput()" required>
+                        <option value="2D">2D Simulation</option>
+                        <option value="3D">3D Simulation</option>
+                    </select>
+                </div>
+
+                <div class="form-group hidden" id="stlInput">
+                    <label for="stlFile">Import STL Model:</label>
+                    <input type="file" id="stlFile" name="stlFile" accept=".stl">
+                </div>
+            </div>
+
             <div class="section-title">Domain Configuration</div>
             <div class="form-grid">
                 <div class="form-group">
@@ -259,6 +333,9 @@
                 <button type="submit">Run Simulation</button>
             </div>
         </form>
+
+        <h2>Overall Summary</h2>
+        <div id="summary">Loading summary...</div>
 
         <footer>
             <!-- <p>Computational Fluid Dynamics Simulator &copy; 2025</p> -->
