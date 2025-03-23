@@ -173,8 +173,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Contact
 
 For questions or feedback, please contact:
-- **Your Name**: [your.email@example.com](mailto:your.email@example.com)
-- **GitHub**: [your-github-profile](https://github.com/your-github-profile)
+- **Shivam Krisnan**: [shivamkrishnan15@gmail.com](mailto:shivamkrishnan15@gmail.com)
+- **GitHub**: [shivamKrishnan](https://github.com/shivamKrishnan)
 
 ---
 
