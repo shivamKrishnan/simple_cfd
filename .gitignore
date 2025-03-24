@@ -6,6 +6,7 @@ __pycache__/
 navier_stokes.exe
 *.o
 *.out
+*.exe
 
 # Output and logs
 output/
@@ -20,5 +21,4 @@ testing.txt
 input_params.txt
 simulation_results.zip
 .zip
-navier_stokes_3d.cpp
 flowchart.md
