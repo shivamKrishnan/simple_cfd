@@ -30,12 +30,17 @@ def run_simulation():
         stl_file = request.files["stlFile"]
         if stl_file:
             stl_file.save("input.stl")  # Save the uploaded STL file
+        domainZ = domainY  # Assuming a cubic domain for simplicity
+        nz = ny  # Same resolution in Z as Y
+    else:
+        domainZ = 0  # Not used for 2D
+        nz = 0  # Not used for 2D
 
     # Write input parameters to input_params.txt
     with open("input_params.txt", "w") as f:
-        f.write(f"{domainX} {domainY}\n")
+        f.write(f"{domainX} {domainY} {domainZ}\n")
         f.write(f"{shapeRadius}\n")
-        f.write(f"{nx} {ny}\n")
+        f.write(f"{nx} {ny} {nz}\n")
         f.write(f"{reynolds}\n")
         f.write(f"{dt}\n")
         f.write(f"{num_steps}\n")
@@ -51,7 +56,10 @@ def run_simulation():
     # Run the C++ simulation
     try:
         # Compile and run the C++ code
-        subprocess.run(["g++", "-fopenmp", "navier_stokes_2d.cpp", "-o", "navier_stokes", "-O2"], check=True)
+        if simulation_type == "3D":
+            subprocess.run(["g++", "-fopenmp", "navier_stokes_3d.cpp", "-o", "navier_stokes", "-O2"], check=True)
+        else:
+            subprocess.run(["g++", "-fopenmp", "navier_stokes_2d.cpp", "-o", "navier_stokes", "-O2"], check=True)
         subprocess.run(["./navier_stokes"], check=True)
     except subprocess.CalledProcessError as e:
         return f"Error running simulation: {e}", 500
