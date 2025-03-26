@@ -38,9 +38,17 @@ def run_simulation():
 
     # Write input parameters to input_params.txt
     with open("input_params.txt", "w") as f:
-        f.write(f"{domainX} {domainY} {domainZ}\n")
-        f.write(f"{shapeRadius}\n")
-        f.write(f"{nx} {ny} {nz}\n")
+        # Modify this section to handle 2D and 3D cases differently
+        if simulation_type == "3D":
+            f.write(f"{domainX} {domainY} {domainZ}\n")
+            f.write(f"{shapeRadius}\n")
+            f.write(f"{nx} {ny} {nz}\n")
+        else:
+            # For 2D, only write the actual X and Y values
+            f.write(f"{domainX} {domainY}\n")
+            f.write(f"{shapeRadius}\n")
+            f.write(f"{nx} {ny}\n")
+        
         f.write(f"{reynolds}\n")
         f.write(f"{dt}\n")
         f.write(f"{num_steps}\n")
