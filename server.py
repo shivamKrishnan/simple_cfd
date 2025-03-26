@@ -61,10 +61,25 @@ def run_simulation():
         shutil.rmtree(output_dir)
     os.makedirs(output_dir)
 
-    # Ensure the overall_summary.txt is created or reset
+    # Prepare the summary file
     summary_path = os.path.join(output_dir, "overall_summary.txt")
     with open(summary_path, "w") as f:
-        f.write("Simulation started...\n")
+        f.write(f"Simulation Details:\n")
+        f.write(f"Dimension: {simulation_type}\n")
+        f.write(f"Domain Size: {domainX} x {domainY}")
+        if simulation_type == "3D":
+            f.write(f" x {domainZ}")
+        f.write("\n")
+        f.write(f"Shape: {shape}\n")
+        f.write(f"Shape Radius/Size: {shapeRadius}\n")
+        f.write(f"Grid Resolution: {nx} x {ny}")
+        if simulation_type == "3D":
+            f.write(f" x {nz}")
+        f.write("\n")
+        f.write(f"Reynolds Number: {reynolds}\n")
+        f.write(f"Time Step (dt): {dt}\n")
+        f.write(f"Total Simulation Steps: {num_steps}\n")
+        f.write(f"Plot Interval: {plot_interval}\n")
 
     # Run the C++ simulation
     try:
@@ -74,25 +89,17 @@ def run_simulation():
         else:
             subprocess.run(["g++", "-fopenmp", "navier_stokes_2d.cpp", "-o", "navier_stokes", "-O2"], check=True)
         
-        # Run the simulation and capture output
-        result = subprocess.run(["./navier_stokes"], 
-                                capture_output=True, 
-                                text=True, 
-                                check=True)
-        
-        # Append simulation output to summary
+        # Run the simulation
+        subprocess.run(["./navier_stokes"], check=True)
+
+        # Append completion status
         with open(summary_path, "a") as f:
-            f.write("\nSimulation Output:\n")
-            f.write(result.stdout)
-            f.write("\nSimulation Completed Successfully.")
+            f.write("\nSimulation Status: Completed Successfully")
 
     except subprocess.CalledProcessError as e:
         # Write error to summary file
         with open(summary_path, "a") as f:
-            f.write(f"\nSimulation Error: {e}")
-            f.write(f"\nStdout: {e.stdout}")
-            f.write(f"\nStderr: {e.stderr}")
-        return f"Error running simulation: {e}", 500
+            f.write(f"\nSimulation Status: Failed")
 
     # Create a zip file of the output directory
     zip_filename = "simulation_results.zip"
