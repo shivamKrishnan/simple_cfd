@@ -204,18 +204,23 @@
         function toggleSimulationMode() {
             const stlInput = document.getElementById('stlInput');
             const objectPropertiesSection = document.getElementById('objectPropertiesSection');
+            const domainZInput = document.getElementById('domainZInput');
+            const nzInput = document.getElementById('nzInput');
             const simulationType = document.getElementById('simulationType').value;
 
             if (simulationType === '3D') {
                 stlInput.classList.remove('hidden');
                 objectPropertiesSection.classList.add('hidden');
+                domainZInput.classList.remove('hidden');
+                nzInput.classList.remove('hidden');
             } else {
                 stlInput.classList.add('hidden');
                 objectPropertiesSection.classList.remove('hidden');
+                domainZInput.classList.add('hidden');
+                nzInput.classList.add('hidden');
             }
         }
 
-        // Function to fetch and display the overall summary
         function fetchSummary() {
             const summaryElement = document.getElementById('summary');
             summaryElement.innerHTML = '<div class="loading">Loading summary data...</div>';
@@ -231,11 +236,166 @@
                 });
         }
 
+        // Modify the form submission to handle summary fetching
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('.simulation-form');
+
+            form.addEventListener('submit', function (event) {
+                // For 3D simulation with STL upload
+                if (document.getElementById('simulationType').value === '3D') {
+                    const stlFile = document.getElementById('stlFile');
+                    if (stlFile.files.length === 0) {
+                        alert('Please select an STL file first');
+                        event.preventDefault();
+                        return;
+                    }
+                }
+
+                // Use Fetch API for form submission to handle response
+                event.preventDefault();
+                const formData = new FormData(form);
+
+                fetch('/run_simulation', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Simulation failed');
+                        }
+                        // Trigger summary fetch after successful simulation
+                        fetchSummary();
+
+                        // Trigger file download
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        // Create a link to download the zip file
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = 'simulation_results.zip';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Simulation failed. Please check the parameters and try again.');
+                    });
+            });
+        });
+
         // Initialize page
         window.onload = function () {
             fetchSummary();
             toggleSimulationMode(); // Set initial state
         };
+
+        // Initialize page
+        window.onload = function () {
+            fetchSummary();
+            toggleSimulationMode(); // Set initial state
+        };
+
+        // Function to generate and show parameters file content
+        function generateParamsFile() {
+            const simulationType = document.getElementById('simulationType').value;
+            const params = {
+                domainX: document.getElementById('domainX').value,
+                domainY: document.getElementById('domainY').value,
+                domainZ: simulationType === '3D' ? document.getElementById('domainY').value : '0',
+                shapeRadius: document.getElementById('shapeRadius').value,
+                nx: document.getElementById('nx').value,
+                ny: document.getElementById('ny').value,
+                nz: simulationType === '3D' ? document.getElementById('ny').value : '0',
+                reynolds: document.getElementById('reynolds').value,
+                dt: document.getElementById('dt').value,
+                num_steps: document.getElementById('num_steps').value,
+                plot_interval: document.getElementById('plot_interval').value,
+                shape: simulationType === '3D' ?
+                    document.getElementById('shape').options[document.getElementById('shape').selectedIndex].text + "_3D" :
+                    document.getElementById('shape').options[document.getElementById('shape').selectedIndex].text
+            };
+
+            let paramsContent = `${params.domainX} ${params.domainY} ${params.domainZ}\n`;
+            paramsContent += `${params.shapeRadius}\n`;
+            paramsContent += `${params.nx} ${params.ny} ${params.nz}\n`;
+            paramsContent += `${params.reynolds}\n`;
+            paramsContent += `${params.dt}\n`;
+            paramsContent += `${params.num_steps}\n`;
+            paramsContent += `${params.plot_interval}\n`;
+            paramsContent += `${params.shape}\n`;
+
+            return {
+                filename: `input_params_${simulationType.toLowerCase()}.txt`,
+                content: paramsContent
+            };
+        }
+
+        // Function to confirm STL upload and show parameters
+        function confirmSTLUpload() {
+            const stlFile = document.getElementById('stlFile');
+            if (stlFile.files.length === 0) {
+                alert('Please select an STL file first');
+                return;
+            }
+
+            const params = generateParamsFile();
+            if (confirm(`STL file will be uploaded with these parameters:\n\n${params.content}\n\nProceed with upload?`)) {
+                // Create a hidden form with the parameters
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.action = '/run_simulation';
+                form.enctype = 'multipart/form-data';
+
+                // Add STL file
+                const stlInput = document.createElement('input');
+                stlInput.type = 'file';
+                stlInput.name = 'stlFile';
+                stlInput.files = stlFile.files;
+                form.appendChild(stlInput);
+
+                // Add other parameters as hidden inputs
+                const inputs = [
+                    'simulationType', 'domainX', 'domainY', 'shapeRadius',
+                    'nx', 'ny', 'reynolds', 'dt', 'num_steps', 'plot_interval', 'shape'
+                ];
+
+                inputs.forEach(name => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = document.getElementById(name).value;
+                    form.appendChild(input);
+                });
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Modify the toggle function to update the button
+        function toggleSimulationMode() {
+            const stlInput = document.getElementById('stlInput');
+            const objectPropertiesSection = document.getElementById('objectPropertiesSection');
+            const simulationType = document.getElementById('simulationType').value;
+
+            if (simulationType === '3D') {
+                stlInput.classList.remove('hidden');
+                objectPropertiesSection.classList.add('hidden');
+                // Change the submit button text and behavior
+                document.querySelector('.simulation-form button').textContent = 'Confirm and Upload STL';
+                document.querySelector('.simulation-form button').setAttribute('onclick', 'confirmSTLUpload()');
+            } else {
+                stlInput.classList.add('hidden');
+                objectPropertiesSection.classList.remove('hidden');
+                // Restore default submit button
+                document.querySelector('.simulation-form button').textContent = 'Run Simulation';
+                document.querySelector('.simulation-form button').removeAttribute('onclick');
+            }
+        }
     </script>
 </head>
 
@@ -258,7 +418,7 @@
                 </div>
 
                 <div class="form-group hidden" id="stlInput">
-                    <label for="stlFile">Import STL Model:</label>
+                    <label for="stlFile">Import STL Model (required for 3D):</label>
                     <input type="file" id="stlFile" name="stlFile" accept=".stl">
                 </div>
             </div>
@@ -275,6 +435,11 @@
                     <input type="number" id="domainY" name="domainY" step="0.1" placeholder="e.g., 10.0" required>
                 </div>
 
+                <div class="form-group hidden" id="domainZInput">
+                    <label for="domainZ">Domain Size Z:</label>
+                    <input type="number" id="domainZ" name="domainZ" step="0.1" placeholder="e.g., 10.0">
+                </div>
+
                 <div class="form-group">
                     <label for="nx">Grid Resolution X:</label>
                     <input type="number" id="nx" name="nx" placeholder="e.g., 100" required>
@@ -284,8 +449,12 @@
                     <label for="ny">Grid Resolution Y:</label>
                     <input type="number" id="ny" name="ny" placeholder="e.g., 100" required>
                 </div>
-            </div>
 
+                <div class="form-group hidden" id="nzInput">
+                    <label for="nz">Grid Resolution Z:</label>
+                    <input type="number" id="nz" name="nz" placeholder="e.g., 100">
+                </div>
+            </div>
             <div id="objectPropertiesSection" class="section-container">
                 <div class="section-title">Object Properties</div>
                 <div class="form-grid">
