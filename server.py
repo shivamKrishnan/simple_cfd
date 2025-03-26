@@ -61,6 +61,11 @@ def run_simulation():
         shutil.rmtree(output_dir)
     os.makedirs(output_dir)
 
+    # Ensure the overall_summary.txt is created or reset
+    summary_path = os.path.join(output_dir, "overall_summary.txt")
+    with open(summary_path, "w") as f:
+        f.write("Simulation started...\n")
+
     # Run the C++ simulation
     try:
         # Compile and run the C++ code
@@ -68,8 +73,25 @@ def run_simulation():
             subprocess.run(["g++", "-fopenmp", "navier_stokes_3d.cpp", "-o", "navier_stokes", "-O2"], check=True)
         else:
             subprocess.run(["g++", "-fopenmp", "navier_stokes_2d.cpp", "-o", "navier_stokes", "-O2"], check=True)
-        subprocess.run(["./navier_stokes"], check=True)
+        
+        # Run the simulation and capture output
+        result = subprocess.run(["./navier_stokes"], 
+                                capture_output=True, 
+                                text=True, 
+                                check=True)
+        
+        # Append simulation output to summary
+        with open(summary_path, "a") as f:
+            f.write("\nSimulation Output:\n")
+            f.write(result.stdout)
+            f.write("\nSimulation Completed Successfully.")
+
     except subprocess.CalledProcessError as e:
+        # Write error to summary file
+        with open(summary_path, "a") as f:
+            f.write(f"\nSimulation Error: {e}")
+            f.write(f"\nStdout: {e.stdout}")
+            f.write(f"\nStderr: {e.stderr}")
         return f"Error running simulation: {e}", 500
 
     # Create a zip file of the output directory
@@ -90,7 +112,7 @@ def get_summary():
             summary = f.read()
         return summary
     except FileNotFoundError:
-        return "Summary not available.", 404
+        return "Summary not available. Run a simulation first.", 404
 
 if __name__ == "__main__":
     app.run(debug=True)
