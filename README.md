@@ -58,7 +58,8 @@ Before running the project, ensure you have the following installed:
    ```
    project/
    ├── venv/                           # Virtual environment (optional)
-   ├── navier_stokes_2d.cpp  # C++ simulation code
+   ├── navier_stokes_2d.cpp            # 2d C++ simulation code
+   ├── navier_stokes_3d.cpp            # 3d C++ simulation code
    ├── server.py                       # Flask backend
    ├── templates/
    │   └── index.html                  # HTML form
@@ -70,7 +71,10 @@ Before running the project, ensure you have the following installed:
 5. Compile the C++ Code
    The Flask backend will automatically compile the C++ code, but you can manually compile it using:
    ```bash
-   g++ -fopenmp navier_stokes_extra_shapes.cpp -o navier_stokes -O2
+   g++ -fopenmp navier_stokes_2d.cpp -o navier_stokes -O2
+   ```
+     ```bash
+   g++ -fopenmp navier_stokes_3d.cpp -o navier_stokes_3d -O2
    ```
 
 ---
