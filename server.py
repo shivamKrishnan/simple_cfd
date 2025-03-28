@@ -101,12 +101,13 @@ def run_simulation():
         with open(summary_path, "a") as f:
             f.write(f"\nSimulation Status: Failed")
 
-    # Create a zip file of the output directory
+    # Create a zip file of the output directory with compression
     zip_filename = "simulation_results.zip"
-    with zipfile.ZipFile(zip_filename, "w") as zipf:
+    with zipfile.ZipFile(zip_filename, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
         for root, dirs, files in os.walk(output_dir):
             for file in files:
-                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), output_dir))
+                zipf.write(os.path.join(root, file), 
+                           os.path.relpath(os.path.join(root, file), output_dir))
 
     # Provide the zip file for download
     return send_file(zip_filename, as_attachment=True)
