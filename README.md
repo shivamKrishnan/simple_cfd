@@ -55,18 +55,24 @@ Before running the project, ensure you have the following installed:
 
 4. Directory Structure
    Ensure your project directory looks like this:
-   ```
-   project/
-   ├── venv/                           # Virtual environment (optional)
-   ├── navier_stokes_2d.cpp            # 2d C++ simulation code
-   ├── navier_stokes_3d.cpp            # 3d C++ simulation code
-   ├── server.py                       # Flask backend
-   ├── templates/
-   │   └── index.html                  # HTML form
-   ├── input_params.txt                # Input file for C++ program
-   ├── output/                         # Directory for simulation output
-   └── simulation_results.zip          # Generated zip file
-   ```
+   ```plaintext
+📦 root
+├── 📝 input_params.txt
+├── ⚖️ LICENSE
+├🌀 navier_stokes_2d.cpp
+├🌀 navier_stokes_3d.cpp
+├🌀 openmp_check.cpp
+├📖 README.md
+├🐍 server.py
+├🗜️ simulation_results.zip
+├📁 input
+├📁 output
+├📁 static
+│   ├📜 script.js
+│   └🎨 styles.css
+└📁 templates
+    └🖥️ index.html
+```
 
 5. Compile the C++ Code
    The Flask backend will automatically compile the C++ code, but you can manually compile it using:
