@@ -71,14 +71,15 @@ Before running the project, ensure you have the following installed:
    │   └🎨 styles.css
    └📁 templates
       └🖥️ index.html
-```
+   ```
 
 5. Compile the C++ Code
    The Flask backend will automatically compile the C++ code, but you can manually compile it using:
+
    ```bash
    g++ -fopenmp navier_stokes_2d.cpp -o navier_stokes -O2
    ```
-     ```bash
+   ```bash
    g++ -fopenmp navier_stokes_3d.cpp -o navier_stokes_3d -O2
    ```
 
