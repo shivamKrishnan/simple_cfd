@@ -56,7 +56,7 @@ Before running the project, ensure you have the following installed:
 4. Directory Structure
    Ensure your project directory looks like this:
    ```
-   📦 root
+   📦 simple_cfd
    ├── 📝 input_params.txt
    ├── ⚖️ LICENSE
    ├🌀 navier_stokes_2d.cpp
@@ -64,7 +64,6 @@ Before running the project, ensure you have the following installed:
    ├🌀 openmp_check.cpp
    ├📖 README.md
    ├🐍 server.py
-   ├🗜️ simulation_results.zip
    ├📁 input
    ├📁 output
    ├📁 static
