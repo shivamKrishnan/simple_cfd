@@ -31,8 +31,8 @@ function fillSuggestedSettings() {
     // Common settings for both 2D and 3D
     document.getElementById('domainX').value = '10.0';
     document.getElementById('domainY').value = '5.0';
-    document.getElementById('shapeRadius').value = '0.5';
-    document.getElementById('reynolds').value = '100.0';
+    document.getElementById('shapeRadius').value = '1.0';
+    document.getElementById('reynolds').value = '300.0';
     document.getElementById('dt').value = '0.01';
     document.getElementById('num_steps').value = '1000';
     document.getElementById('plot_interval').value = '50';
@@ -40,8 +40,8 @@ function fillSuggestedSettings() {
 
     if (simulationType === '2D') {
         // 2D specific settings
-        document.getElementById('nx').value = '200';
-        document.getElementById('ny').value = '100';
+        document.getElementById('nx').value = '400';
+        document.getElementById('ny').value = '200';
     } else {
         // 3D specific settings
         document.getElementById('domainZ').value = '5.0';
