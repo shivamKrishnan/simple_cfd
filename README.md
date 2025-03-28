@@ -55,23 +55,23 @@ Before running the project, ensure you have the following installed:
 
 4. Directory Structure
    Ensure your project directory looks like this:
-   ```plaintext
-📦 root
-├── 📝 input_params.txt
-├── ⚖️ LICENSE
-├🌀 navier_stokes_2d.cpp
-├🌀 navier_stokes_3d.cpp
-├🌀 openmp_check.cpp
-├📖 README.md
-├🐍 server.py
-├🗜️ simulation_results.zip
-├📁 input
-├📁 output
-├📁 static
-│   ├📜 script.js
-│   └🎨 styles.css
-└📁 templates
-    └🖥️ index.html
+   ```
+   📦 root
+   ├── 📝 input_params.txt
+   ├── ⚖️ LICENSE
+   ├🌀 navier_stokes_2d.cpp
+   ├🌀 navier_stokes_3d.cpp
+   ├🌀 openmp_check.cpp
+   ├📖 README.md
+   ├🐍 server.py
+   ├🗜️ simulation_results.zip
+   ├📁 input
+   ├📁 output
+   ├📁 static
+   │   ├📜 script.js
+   │   └🎨 styles.css
+   └📁 templates
+      └🖥️ index.html
 ```
 
 5. Compile the C++ Code
