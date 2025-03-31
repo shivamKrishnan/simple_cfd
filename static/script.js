@@ -61,16 +61,16 @@ function fillSuggestedSettings() {
     document.getElementById('domainX').value = '10.0';
     document.getElementById('domainY').value = '5.0';
     document.getElementById('shapeRadius').value = '1.0';
-    document.getElementById('reynolds').value = '300.0';
-    document.getElementById('dt').value = '0.01';
-    document.getElementById('num_steps').value = '1000';
-    document.getElementById('plot_interval').value = '50';
-    document.getElementById('shape').value = 'CIRCLE';
+    document.getElementById('reynolds').value = '200.0';
+    document.getElementById('dt').value = '0.005';
+    document.getElementById('num_steps').value = '5000';
+    document.getElementById('plot_interval').value = '200';
 
     if (simulationType === '2D') {
         // 2D specific settings
         document.getElementById('nx').value = '400';
         document.getElementById('ny').value = '200';
+        document.getElementById('shape').value = 'CIRCLE';
     } else {
         // 3D specific settings
         document.getElementById('domainZ').value = '5.0';
@@ -203,8 +203,7 @@ function generateParamsFile() {
         dt: document.getElementById('dt').value,
         num_steps: document.getElementById('num_steps').value,
         plot_interval: document.getElementById('plot_interval').value,
-        shape: simulationType === '3D' ?
-            document.getElementById('shape').options[document.getElementById('shape').selectedIndex].text + "_3D" :
+        shape: simulationType === '3D' ? 'CUSTOM' :
             document.getElementById('shape').options[document.getElementById('shape').selectedIndex].text
     };
 

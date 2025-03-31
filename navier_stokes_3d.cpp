@@ -1022,83 +1022,78 @@ public:
 
 int main(int argc, char *argv[])
 {
-    // Get number of threads from command line or use default
-    int num_threads = 4; // Default value
-    if (argc > 1)
+    // Read input parameters from input_params.txt
+    std::ifstream input_file("input_params.txt");
+    if (!input_file.is_open())
     {
-        num_threads = std::atoi(argv[1]);
+        std::cerr << "Error: Could not open input_params.txt" << std::endl;
+        return 1;
     }
 
-    // Set number of OpenMP threads
-    omp_set_num_threads(num_threads);
-    std::cout << "Running with " << num_threads << " threads" << std::endl;
+    double domainX, domainY, domainZ, shapeRadius, reynolds, dt;
+    int nx, ny, nz, numSteps, plotInterval;
+    std::string shapeStr, stlFilename;
+    bool useCustomShape;
+
+    input_file >> domainX >> domainY >> domainZ;
+    input_file >> shapeRadius;
+    input_file >> nx >> ny >> nz;
+    input_file >> reynolds;
+    input_file >> dt;
+    input_file >> numSteps;
+    input_file >> plotInterval;
+    input_file >> shapeStr;
+    input_file >> useCustomShape;
+    if (useCustomShape)
+    {
+        input_file >> stlFilename;
+    }
+
+    input_file.close();
 
     // Define simulation parameters
-    std::tuple<double, double, double> domain_size = {10.0, 5.0, 5.0}; // Cuboid dimensions
-    int nx = 101, ny = 51, nz = 51;                                    // Grid resolution
-    double reynolds = 300.0;                                           // Reynolds number
-    double dt = 0.01;                                                  // Time step
-    int num_steps = 5000;                                              // Number of simulation steps
-    int plot_interval = 200;                                           // Plotting interval
-    int max_iter = 5000;                                               // Maximum iterations for pressure solver
-    double tol = 1e-5;                                                 // Convergence tolerance
-    double r = 0.8;                                                    // Radius or half-length of the shape
+    std::tuple<double, double, double> domain_size = {domainX, domainY, domainZ};
 
-    // Let the user choose the shape
-    std::cout << "Choose shape (0: Sphere, 1: Cube, 2: Cylinder, 3: Custom from file): ";
-    int shape_choice;
-    std::cin >> shape_choice;
-
+    // Function to determine if a point is inside the solid object
     std::function<bool(double, double, double)> isSolid;
     std::vector<Triangle> triangles;
 
-    if (shape_choice == 3)
+    if (useCustomShape)
     {
-        std::string filename;
-        std::cout << "Enter the path to the STL file: ";
-        std::cin >> filename;
-
-        triangles = readSTL(filename);
+        // Read and preprocess the STL file
+        triangles = readSTL(stlFilename);
         std::cout << "Read " << triangles.size() << " triangles from STL file." << std::endl;
-
-        // Preprocess the STL to ensure it's watertight
         preprocessSTL(triangles);
-
         // Calculate bounding box of the original STL model
         double min_x, max_x, min_y, max_y, min_z, max_z;
         calculateBoundingBox(triangles, min_x, max_x, min_y, max_y, min_z, max_z);
-
         // Calculate model dimensions
         double width = max_x - min_x;
         double height = max_y - min_y;
         double depth = max_z - min_z;
         double max_dim = std::max(width, std::max(height, depth));
-
         // Compute scale factor to make sure model fits in domain
         double scale_factor = 1.0;
         if (max_dim > 0)
         {
             // Scale to 1/4th of the domain size
-            scale_factor = 2.0 / max_dim;
+            scale_factor = 1.0 / max_dim;
         }
-
-        // Define the desired position (2.5, 2.5, 2.5)
-        double desired_x = 2.5, desired_y = 2.5, desired_z = 2.5;
-
+        // New (1/4th of domain in X, centered in Y and Z)
+        double desired_x = domainX / 4.0; // Moves model to 25% of X-length
+        double desired_y = domainY / 2.0; // Keeps Y centered
+        double desired_z = domainZ / 2.0; // Keeps Z centered
         // Calculate the translation vector to move the STL model to the desired position
         double translate_x = desired_x - (max_x + min_x) / 2.0 * scale_factor;
         double translate_y = desired_y - (max_y + min_y) / 2.0 * scale_factor;
         double translate_z = desired_z - (max_z + min_z) / 2.0 * scale_factor;
-
         // Translate and scale the STL model
         translateAndScaleSTL(triangles, translate_x, translate_y, translate_z, scale_factor);
-
         // Update the bounding box after translation and scaling
         calculateBoundingBox(triangles, min_x, max_x, min_y, max_y, min_z, max_z);
         std::cout << "After scaling and translation, new bounding box: ("
                   << min_x << ", " << min_y << ", " << min_z << ") to ("
                   << max_x << ", " << max_y << ", " << max_z << ")" << std::endl;
-
         // Define the solid function using the translated and scaled STL model
         isSolid = [triangles](double x, double y, double z)
         {
@@ -1109,8 +1104,20 @@ int main(int argc, char *argv[])
     else
     {
         // Use predefined shapes
-        double cx = 2.5, cy = 2.5, cz = 2.5; // Center of the shape
-        isSolid = getShapeFunction(static_cast<ShapeType>(shape_choice), cx, cy, cz, r);
+        double cx = domainX / 2.0, cy = domainY / 2.0, cz = domainZ / 2.0; // Center of the shape
+        ShapeType shapeType;
+        if (shapeStr == "SPHERE")
+            shapeType = ShapeType::SPHERE;
+        else if (shapeStr == "CUBE")
+            shapeType = ShapeType::CUBE;
+        else if (shapeStr == "CYLINDER")
+            shapeType = ShapeType::CYLINDER;
+        else
+        {
+            std::cerr << "Invalid shape in input_params.txt" << std::endl;
+            return 1;
+        }
+        isSolid = getShapeFunction(shapeType, cx, cy, cz, shapeRadius);
     }
 
     // Create and run the solver
@@ -1121,12 +1128,15 @@ int main(int argc, char *argv[])
         nx, ny, nz,
         reynolds,
         dt,
-        max_iter,
-        tol,
-        r // Pass radius to the solver
+        1000,       // max_iter
+        1e-5,       // tol
+        shapeRadius // Pass radius to the solver
     );
 
-    solver.simulate(num_steps, plot_interval);
+    auto start_time = std::chrono::high_resolution_clock::now();
+    solver.simulate(numSteps, plotInterval);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    double totalTime = std::chrono::duration<double>(end_time - start_time).count();
 
     // Calculate and print drag coefficient
     double cd = solver.computeDragCoefficient();

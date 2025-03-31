@@ -12,7 +12,7 @@ def index():
 
 @app.route("/run_simulation", methods=["POST"])
 def run_simulation():
-    # Get user inputs from the form
+    # Get all parameters including LES
     simulation_type = request.form["simulationType"]
     domainX = float(request.form["domainX"])
     domainY = float(request.form["domainY"])
@@ -24,49 +24,58 @@ def run_simulation():
     num_steps = int(request.form["num_steps"])
     plot_interval = int(request.form["plot_interval"])
     shape = request.form["shape"]
-    # In the run_simulation function, modify the Smagorinsky constant handling:
-    use_les = request.form.get("use_les", "false") == "true"  # Convert to boolean
-    smagorinsky_constant = 0.1  # Default value
-    if use_les:
-        try:
-            smagorinsky_constant = float(request.form.get("smagorinsky_constant", "0.1"))
-        except ValueError:
-            smagorinsky_constant = 0.1  # Fallback to default if conversion fails
+    
+    # Get LES parameters (must use get() with default values)
+    use_les = request.form.get("use_les", "false") == "true"
+    smagorinsky_constant = float(request.form.get("smagorinsky_constant", "0.1")) if use_les else 0.1
 
-    # Handle STL file upload for 3D simulations
+    # Handle 3D case
     if simulation_type == "3D":
-        stl_file = request.files["stlFile"]
+        domainZ = float(request.form["domainZ"])
+        nz = int(request.form["nz"])
+        stl_file = request.files.get("stlFile")
         if stl_file:
-            stl_file.save("input.stl")  # Save the uploaded STL file
-        domainZ = domainY  # Assuming a cubic domain for simplicity
-        nz = ny  # Same resolution in Z as Y
+            stl_filename = "input.stl"
+            stl_file.save(stl_filename)
     else:
-        domainZ = 0  # Not used for 2D
-        nz = 0  # Not used for 2D
+        domainZ = 0.0
+        nz = 0
 
-    # Write input parameters to input_params.txt
+    # Write input_params.txt
     with open("input_params.txt", "w") as f:
-        # Modify this section to handle 2D and 3D cases differently
+        # Domain dimensions
         if simulation_type == "3D":
             f.write(f"{domainX} {domainY} {domainZ}\n")
-            f.write(f"{shapeRadius}\n")
+        else:
+            f.write(f"{domainX} {domainY}\n")
+
+        f.write(f"{shapeRadius}\n")  # Shape radius
+        
+        # Grid resolution
+        if simulation_type == "3D":
             f.write(f"{nx} {ny} {nz}\n")
         else:
-            # For 2D, only write the actual X and Y values
-            f.write(f"{domainX} {domainY}\n")
-            f.write(f"{shapeRadius}\n")
             f.write(f"{nx} {ny}\n")
-        
+
+        # Common parameters
         f.write(f"{reynolds}\n")
         f.write(f"{dt}\n")
         f.write(f"{num_steps}\n")
         f.write(f"{plot_interval}\n")
-        f.write(f"{shape}\n")
-        f.write(f"{use_les}\n")  # Add LES flag (true/false)
-        use_les_num = 1 if use_les == "true" else 0
-        f.write(f"{use_les_num}\n")
-        if use_les == "true":
+        
+        # Shape handling
+        if simulation_type == "3D":
+            f.write("CUSTOM\n1\n")  # Force custom shape for 3D
+            if stl_file:
+                f.write(f"{stl_filename}\n")
+        else:
+            f.write(f"{shape}\n0\n")  # Use selected shape for 2D
+        
+        # LES parameters
+        f.write(f"{int(use_les)}\n")
+        if use_les:
             f.write(f"{smagorinsky_constant}\n")
+
 
     # Clear the output directory before running the simulation
     output_dir = "output"
