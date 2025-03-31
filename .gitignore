@@ -7,9 +7,11 @@ navier_stokes.exe
 *.o
 *.out
 *.exe
+*.vtk
 
 # Output and logs
 output/
+input/
 simulation_results.zip
 
 # System files
@@ -22,3 +24,4 @@ input_params.txt
 simulation_results.zip
 .zip
 flowchart.md
+input.stl
