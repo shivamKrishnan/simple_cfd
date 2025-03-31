@@ -24,6 +24,14 @@ def run_simulation():
     num_steps = int(request.form["num_steps"])
     plot_interval = int(request.form["plot_interval"])
     shape = request.form["shape"]
+    # In the run_simulation function, modify the Smagorinsky constant handling:
+    use_les = request.form.get("use_les", "false") == "true"  # Convert to boolean
+    smagorinsky_constant = 0.1  # Default value
+    if use_les:
+        try:
+            smagorinsky_constant = float(request.form.get("smagorinsky_constant", "0.1"))
+        except ValueError:
+            smagorinsky_constant = 0.1  # Fallback to default if conversion fails
 
     # Handle STL file upload for 3D simulations
     if simulation_type == "3D":
@@ -54,6 +62,11 @@ def run_simulation():
         f.write(f"{num_steps}\n")
         f.write(f"{plot_interval}\n")
         f.write(f"{shape}\n")
+        f.write(f"{use_les}\n")  # Add LES flag (true/false)
+        use_les_num = 1 if use_les == "true" else 0
+        f.write(f"{use_les_num}\n")
+        if use_les == "true":
+            f.write(f"{smagorinsky_constant}\n")
 
     # Clear the output directory before running the simulation
     output_dir = "output"
@@ -80,6 +93,9 @@ def run_simulation():
         f.write(f"Time Step (dt): {dt}\n")
         f.write(f"Total Simulation Steps: {num_steps}\n")
         f.write(f"Plot Interval: {plot_interval}\n")
+        f.write(f"LES Model: {'Enabled' if use_les == 'true' else 'Disabled'}\n")
+        if use_les == "true":
+            f.write(f"Smagorinsky Constant: {smagorinsky_constant}\n")
 
     # Run the C++ simulation
     try:

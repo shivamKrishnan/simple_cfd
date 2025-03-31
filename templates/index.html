@@ -119,6 +119,19 @@
                     <label for="plot_interval">Plot Interval:</label>
                     <input type="number" id="plot_interval" name="plot_interval" placeholder="e.g., 20" required>
                 </div>
+                <div class="form-group">
+                    <label for="use_les">Use Large Eddy Simulation (LES):</label>
+                    <select id="use_les" name="use_les" onchange="toggleLESOptions()">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+
+                <div class="form-group hidden" id="les_constant_input">
+                    <label for="smagorinsky_constant">Smagorinsky Constant:</label>
+                    <input type="number" id="smagorinsky_constant" name="smagorinsky_constant" step="0.01"
+                        placeholder="e.g., 0.17">
+                </div>
             </div>
 
             <div class="submit-container">
@@ -127,7 +140,7 @@
                     onclick="fillSuggestedSettings()">Suggest Settings</button>
                 <button type="submit">Run Simulation</button>
             </div>
-            
+
         </form>
 
         <h2>Overall Summary</h2>

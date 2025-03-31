@@ -25,8 +25,37 @@ function toggleSimulationMode() {
     }
 }
 
+function toggleLESOptions() {
+    const useLES = document.getElementById('use_les').value;
+    const lesSmagorinskyInput = document.getElementById('les_constant_input');
+
+    function toggleLESOptions() {
+        const useLES = document.getElementById('use_les').value === 'true';
+        const lesSmagorinskyInput = document.getElementById('les_constant_input');
+
+        if (useLES) {
+            lesSmagorinskyInput.classList.remove('hidden');
+        } else {
+            lesSmagorinskyInput.classList.add('hidden');
+            // Clear the value when hidden to prevent submission of empty string
+            document.getElementById('smagorinsky_constant').value = '0.1';
+        }
+    }
+}
+
 function fillSuggestedSettings() {
     const simulationType = document.getElementById('simulationType').value;
+
+    // Reset LES settings
+    document.getElementById('use_les').value = 'false';
+    toggleLESOptions(); // Hide Smagorinsky constant input
+
+    // If you want to set Smagorinsky constant suggestion for LES
+    if (simulationType === '2D') {
+        document.getElementById('use_les').value = 'true';
+        toggleLESOptions(); // Show Smagorinsky constant input
+        document.getElementById('smagorinsky_constant').value = '0.17';
+    }
 
     // Common settings for both 2D and 3D
     document.getElementById('domainX').value = '10.0';

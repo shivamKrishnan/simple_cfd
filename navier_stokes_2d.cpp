@@ -39,15 +39,17 @@ public:
 
 private:
     // Domain parameters
-    double Lx, Ly;    // Domain size
-    double cx, cy, r; // Shape center and radius (or size)
-    int nx, ny;       // Number of grid points
-    double dx, dy;    // Grid spacing
-    double Re;        // Reynolds number
-    double dt;        // Time step
-    int max_iter;     // Maximum iterations for pressure solver
-    double tol;       // Convergence tolerance
-    Shape shape;      // Shape type
+    double Lx, Ly;       // Domain size
+    double cx, cy, r;    // Shape center and radius (or size)
+    int nx, ny;          // Number of grid points
+    double dx, dy;       // Grid spacing
+    double Re;           // Reynolds number
+    double dt;           // Time step
+    int max_iter;        // Maximum iterations for pressure solver
+    double tol;          // Convergence tolerance
+    Shape shape;         // Shape type
+    bool use_les = true; // Enable/disable LES
+    double cs = 0.1;     // Smagorinsky constant (typical value)
 
     // Fields
     std::vector<std::vector<double>> u;      // x-velocity
@@ -57,6 +59,42 @@ private:
     std::vector<std::vector<double>> v_prev; // previous v
     std::vector<std::vector<int>> mask;      // Fluid/solid mask
     std::vector<double> x, y;                // Grid coordinates
+    std::vector<std::vector<double>> nu_t;   // Turbulent eddy viscosity
+
+    // Compute turbulent viscosity using Smagorinsky model
+    void computeTurbulentViscosity()
+    {
+        // Resize turbulent viscosity field
+        nu_t.resize(ny, std::vector<double>(nx, 0.0));
+
+        // Compute strain rate tensor components and eddy viscosity
+#pragma omp parallel for collapse(2)
+        for (int i = 1; i < ny - 1; ++i)
+        {
+            for (int j = 1; j < nx - 1; ++j)
+            {
+                if (mask[i][j] == 1)
+                {
+                    // Strain rate tensor components
+                    double S11 = (u[i][j + 1] - u[i][j - 1]) / (2 * dx);
+                    double S22 = (v[i + 1][j] - v[i - 1][j]) / (2 * dy);
+
+                    // Shear strain rate
+                    double S12 = 0.5 * ((u[i + 1][j] - u[i - 1][j]) / (2 * dy) +
+                                        (v[i][j + 1] - v[i][j - 1]) / (2 * dx));
+
+                    // Magnitude of strain rate tensor
+                    double S_mag = std::sqrt(2.0 * (S11 * S11 + S22 * S22 + 2 * S12 * S12));
+
+                    // Filter width (grid spacing)
+                    double delta = std::sqrt(dx * dy);
+
+                    // Compute eddy viscosity (Smagorinsky model)
+                    nu_t[i][j] = (cs * delta) * (cs * delta) * S_mag;
+                }
+            }
+        }
+    }
 
 public:
     NavierStokesSolver(
@@ -92,6 +130,7 @@ public:
         u_prev.resize(ny, std::vector<double>(nx, 0.0));
         v_prev.resize(ny, std::vector<double>(nx, 0.0));
         mask.resize(ny, std::vector<int>(nx, 1));
+        nu_t.resize(ny, std::vector<double>(nx, 0.0));
 
         // Set up the shape mask
         setupMask();
@@ -101,6 +140,18 @@ public:
         {
             u[i][0] = 1.0; // Inlet velocity (uniform flow)
         }
+    }
+
+    // Add method to toggle LES
+    void setLESMode(bool enable)
+    {
+        use_les = enable;
+    }
+
+    // Add method to set Smagorinsky constant
+    void setSmagorinskyConstant(double constant)
+    {
+        cs = constant;
     }
 
     void setupMask()
@@ -401,6 +452,7 @@ public:
             }
         }
     }
+
     std::vector<std::vector<double>> pressurePoisson()
     {
         // Create the right-hand side of the pressure equation
@@ -512,6 +564,12 @@ public:
 
     void solveStep()
     {
+        // Compute turbulent viscosity if LES is enabled
+        if (use_les)
+        {
+            computeTurbulentViscosity();
+        }
+
         // Store previous velocities
         u_prev = u;
         v_prev = v;
@@ -520,26 +578,31 @@ public:
         std::vector<std::vector<double>> u_temp = u;
         std::vector<std::vector<double>> v_temp = v;
 
-// Calculate intermediate velocity (without pressure gradient)
+        // Calculate intermediate velocity (with turbulent viscosity)
 #pragma omp parallel for collapse(2)
         for (int i = 1; i < ny - 1; ++i)
         {
             for (int j = 1; j < nx - 1; ++j)
             {
                 if (mask[i][j] == 1)
-                { // Only update fluid cells
-                    // x-momentum equation
+                {
+                    // Effective viscosity (laminar + turbulent)
+                    double nu_eff = (use_les ? 1.0 / Re + nu_t[i][j] : 1.0 / Re);
+
+                    // x-momentum equation with turbulent viscosity
                     u_temp[i][j] = u[i][j] + dt * (
-                                                      // Viscous terms
-                                                      1 / Re * ((u[i + 1][j] - 2 * u[i][j] + u[i - 1][j]) / (dy * dy) + (u[i][j + 1] - 2 * u[i][j] + u[i][j - 1]) / (dx * dx)) -
+                                                      // Viscous terms (with effective viscosity)
+                                                      nu_eff * ((u[i + 1][j] - 2 * u[i][j] + u[i - 1][j]) / (dy * dy) +
+                                                                (u[i][j + 1] - 2 * u[i][j] + u[i][j - 1]) / (dx * dx)) -
                                                       // Convective terms
                                                       u[i][j] * (u[i][j + 1] - u[i][j - 1]) / (2 * dx) -
                                                       v[i][j] * (u[i + 1][j] - u[i - 1][j]) / (2 * dy));
 
-                    // y-momentum equation
+                    // y-momentum equation with turbulent viscosity
                     v_temp[i][j] = v[i][j] + dt * (
-                                                      // Viscous terms
-                                                      1 / Re * ((v[i + 1][j] - 2 * v[i][j] + v[i - 1][j]) / (dy * dy) + (v[i][j + 1] - 2 * v[i][j] + v[i][j - 1]) / (dx * dx)) -
+                                                      // Viscous terms (with effective viscosity)
+                                                      nu_eff * ((v[i + 1][j] - 2 * v[i][j] + v[i - 1][j]) / (dy * dy) +
+                                                                (v[i][j + 1] - 2 * v[i][j] + v[i][j - 1]) / (dx * dx)) -
                                                       // Convective terms
                                                       u[i][j] * (v[i][j + 1] - v[i][j - 1]) / (2 * dx) -
                                                       v[i][j] * (v[i + 1][j] - v[i - 1][j]) / (2 * dy));
@@ -550,7 +613,7 @@ public:
         // Solve pressure Poisson equation
         p = pressurePoisson();
 
-// Correct velocities with pressure gradient
+        // Correct velocities with pressure gradient
 #pragma omp parallel for collapse(2)
         for (int i = 1; i < ny - 1; ++i)
         {
@@ -564,9 +627,9 @@ public:
             }
         }
 
-// Apply boundary conditions
+        // Apply boundary conditions
 
-// Left boundary (inlet): fixed uniform velocity
+        // Left boundary (inlet): fixed uniform velocity
 #pragma omp parallel for
         for (int i = 0; i < ny; ++i)
         {
@@ -574,7 +637,7 @@ public:
             v[i][0] = 0.0;
         }
 
-// Right boundary (outlet): zero gradient
+        // Right boundary (outlet): zero gradient
 #pragma omp parallel for
         for (int i = 0; i < ny; ++i)
         {
@@ -582,7 +645,7 @@ public:
             v[i][nx - 1] = v[i][nx - 2];
         }
 
-// Top and bottom boundaries: no-slip
+        // Top and bottom boundaries: no-slip
 #pragma omp parallel for
         for (int j = 0; j < nx; ++j)
         {
@@ -592,7 +655,7 @@ public:
             v[ny - 1][j] = 0.0;
         }
 
-// Shape boundary: enforce zero velocity inside and on the shape
+        // Shape boundary: enforce zero velocity inside and on the shape
 #pragma omp parallel for collapse(2)
         for (int i = 0; i < ny; ++i)
         {
@@ -669,6 +732,20 @@ public:
             }
         }
 
+        // Write turbulent viscosity field if LES is enabled
+        if (use_les)
+        {
+            file << "SCALARS turbulent_viscosity float 1" << std::endl;
+            file << "LOOKUP_TABLE default" << std::endl;
+            for (int i = 0; i < ny; ++i)
+            {
+                for (int j = 0; j < nx; ++j)
+                {
+                    file << std::fixed << std::setprecision(6) << nu_t[i][j] << std::endl;
+                }
+            }
+        }
+
         file.close();
     }
 
@@ -713,6 +790,11 @@ public:
             file << "Maximum v velocity: " << max_v << std::endl;
             file << "Average pressure: " << avg_p << std::endl;
             file << "Fluid cells: " << fluid_cells << " (" << (double)fluid_cells / (nx * ny) * 100.0 << "% of domain)" << std::endl;
+            file << "LES Model: " << (use_les ? "Enabled" : "Disabled") << std::endl;
+            if (use_les)
+            {
+                file << "Smagorinsky Constant: " << cs << std::endl;
+            }
 
             file.close();
         }
@@ -724,7 +806,7 @@ public:
 
     void simulate(int num_steps = 1000, int plot_interval = 100)
     {
-// Create output directory if it doesn't exist
+        // Create output directory if it doesn't exist
 #ifdef _WIN32
         system("mkdir output 2> nul");
 #else
@@ -806,6 +888,7 @@ public:
         return drag_coefficient;
     }
 };
+
 void displayShapes()
 {
     std::cout << "Available shapes:\n";
@@ -829,7 +912,8 @@ void displayShapes()
 
 // Function to get user input for simulation parameters
 void getUserInput(double &domainX, double &domainY, double &shapeRadius,
-                  int &nx, int &ny, double &reynolds, double &dt, int &numSteps, int &plotInterval)
+                  int &nx, int &ny, double &reynolds, double &dt,
+                  int &numSteps, int &plotInterval, bool &useLES, double &smagorinskyConstant)
 {
     std::cout << "Enter domain size (Lx Ly): ";
     std::cin >> domainX >> domainY;
@@ -851,11 +935,22 @@ void getUserInput(double &domainX, double &domainY, double &shapeRadius,
 
     std::cout << "Enter plot interval: ";
     std::cin >> plotInterval;
+
+    std::cout << "Use Large Eddy Simulation (LES)? (1 for Yes, 0 for No): ";
+    std::cin >> useLES;
+
+    if (useLES)
+    {
+        std::cout << "Enter Smagorinsky constant (default 0.1): ";
+        std::cin >> smagorinskyConstant;
+    }
 }
 
 // Function to display user settings in the console
 void displayUserSettings(int shapeChoice, double domainX, double domainY, double shapeRadius,
-                         int nx, int ny, double reynolds, double dt, int numSteps, int plotInterval)
+                         int nx, int ny, double reynolds, double dt,
+                         int numSteps, int plotInterval,
+                         bool useLES, double smagorinskyConstant)
 {
     std::cout << "\nUser Settings:\n";
     std::cout << "-------------------------------\n";
@@ -867,12 +962,18 @@ void displayUserSettings(int shapeChoice, double domainX, double domainY, double
     std::cout << "Time step: " << dt << "\n";
     std::cout << "Number of time steps: " << numSteps << "\n";
     std::cout << "Plot interval: " << plotInterval << "\n";
+    std::cout << "LES Turbulence Model: " << (useLES ? "Enabled" : "Disabled") << "\n";
+    if (useLES)
+    {
+        std::cout << "Smagorinsky Constant: " << smagorinskyConstant << "\n";
+    }
     std::cout << "-------------------------------\n";
 }
 
 // Function to generate an overall summary of the simulation
 void generateOverallSummary(int numSteps, double totalTime, double finalDragCoefficient,
-                            double maxU, double maxV, double avgPressure, int fluidCells)
+                            double maxU, double maxV, double avgPressure, int fluidCells,
+                            bool useLES, double smagorinskyConstant)
 {
     std::ofstream summaryFile("output/overall_summary.txt");
     if (!summaryFile.is_open())
@@ -890,6 +991,11 @@ void generateOverallSummary(int numSteps, double totalTime, double finalDragCoef
     summaryFile << "Maximum v velocity: " << maxV << "\n";
     summaryFile << "Average pressure: " << avgPressure << "\n";
     summaryFile << "Fluid cells: " << fluidCells << "\n";
+    summaryFile << "LES Model: " << (useLES ? "Enabled" : "Disabled") << "\n";
+    if (useLES)
+    {
+        summaryFile << "Smagorinsky Constant: " << smagorinskyConstant << "\n";
+    }
     summaryFile << "-------------------------------\n";
 
     summaryFile.close();
@@ -905,8 +1011,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    double domainX, domainY, shapeRadius, reynolds, dt;
+    double domainX, domainY, shapeRadius, reynolds, dt, smagorinskyConstant;
     int nx, ny, numSteps, plotInterval;
+    bool useLES;
     std::string shapeStr;
 
     input_file >> domainX >> domainY;
@@ -917,6 +1024,8 @@ int main(int argc, char *argv[])
     input_file >> numSteps;
     input_file >> plotInterval;
     input_file >> shapeStr;
+    input_file >> useLES;
+    input_file >> smagorinskyConstant;
 
     input_file.close();
 
@@ -973,6 +1082,13 @@ int main(int argc, char *argv[])
         reynolds,
         dt);
 
+    // Configure LES if enabled
+    if (useLES)
+    {
+        solver.setLESMode(true);
+        solver.setSmagorinskyConstant(smagorinskyConstant);
+    }
+
     auto start_time = std::chrono::high_resolution_clock::now();
     solver.simulate(numSteps, plotInterval);
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -1006,7 +1122,7 @@ int main(int argc, char *argv[])
     }
 
     // Generate overall summary
-    generateOverallSummary(numSteps, totalTime, cd, maxU, maxV, avgPressure, fluidCells);
+    generateOverallSummary(numSteps, totalTime, cd, maxU, maxV, avgPressure, fluidCells, useLES, smagorinskyConstant);
 
     return 0;
 }

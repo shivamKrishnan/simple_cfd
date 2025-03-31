@@ -221,3 +221,7 @@ footer {
     z-index: 1000;
     opacity: 1;
 }
+
+#les_constant_input {
+    transition: all 0.3s ease;
+}
