@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
     A([Start]) --> B[Web Interface]
     B --> C{Simulation Type?}
@@ -35,3 +36,4 @@ flowchart TD
         S -->|Yes| M
         S -->|No| T
     end
+```
