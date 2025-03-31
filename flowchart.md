@@ -28,12 +28,4 @@ flowchart TD
     style A fill:#4CAF50,stroke:#388E3C
     style V fill:#4CAF50,stroke:#388E3C
     style U fill:#2196F3,stroke:#0D47A1
-
-    subgraph left
-        direction LR
-        Q -->|No| M
-        Q -->|Yes| R
-        S -->|Yes| M
-        S -->|No| T
-    end
 ```
