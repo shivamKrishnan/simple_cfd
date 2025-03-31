@@ -13,6 +13,7 @@ navier_stokes.exe
 output/
 input/
 simulation_results.zip
+model/
 
 # System files
 .DS_Store
