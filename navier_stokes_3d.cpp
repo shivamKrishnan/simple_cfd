@@ -10,9 +10,7 @@
 #include <tuple>
 #include <limits>
 #include <functional>
-#include <cstring>
-#include <sstream>
-#include <cstdint>
+#include <map>
 
 // Define M_PI if not already defined
 #ifndef M_PI
@@ -25,11 +23,12 @@ struct Triangle
     double v1[3], v2[3], v3[3]; // Vertices of the triangle
 };
 
-// Improved STL Parser Function (supports both binary and ASCII formats)
+// Function to read an STL file (ASCII format)
 std::vector<Triangle> readSTL(const std::string &filename)
 {
     std::vector<Triangle> triangles;
-    std::ifstream file(filename, std::ios::binary);
+    std::ifstream file(filename);
+    std::string line;
 
     if (!file.is_open())
     {
@@ -37,91 +36,71 @@ std::vector<Triangle> readSTL(const std::string &filename)
         return triangles;
     }
 
-    // Try to determine if the file is ASCII or binary
-    char header[80] = {0};
-    file.read(header, 80);
-
-    // Check if file begins with "solid" (ASCII STL)
-    bool isASCII = (strncmp(header, "solid", 5) == 0);
-
-    // Return to beginning of file
-    file.seekg(0, std::ios::beg);
-
-    if (isASCII)
+    while (std::getline(file, line))
     {
-        // Process ASCII STL file
-        std::string line;
-        int vertexCount = 0;
-        Triangle currentTriangle;
+        // Skip lines until we find a facet
+        if (line.find("facet normal") == std::string::npos)
+        {
+            continue;
+        }
 
+        Triangle tri;
+        bool vertices_found = false;
+        int vertices_read = 0;
+
+        // Read the next lines looking for vertices
         while (std::getline(file, line))
         {
-            // Trim whitespace from the beginning of the line
-            line.erase(0, line.find_first_not_of(" \t"));
-
-            if (line.substr(0, 6) == "vertex")
+            // Skip empty lines and non-vertex lines
+            if (line.find("vertex") != std::string::npos)
             {
-                // Extract vertex coordinates
                 double x, y, z;
-                std::istringstream iss(line.substr(6));
-                if (!(iss >> x >> y >> z))
+                if (sscanf(line.c_str(), " vertex %lf %lf %lf", &x, &y, &z) == 3)
                 {
-                    std::cerr << "Error: Failed to parse vertex coordinates" << std::endl;
-                    continue;
+                    if (vertices_read == 0)
+                    {
+                        tri.v1[0] = x;
+                        tri.v1[1] = y;
+                        tri.v1[2] = z;
+                    }
+                    else if (vertices_read == 1)
+                    {
+                        tri.v2[0] = x;
+                        tri.v2[1] = y;
+                        tri.v2[2] = z;
+                    }
+                    else if (vertices_read == 2)
+                    {
+                        tri.v3[0] = x;
+                        tri.v3[1] = y;
+                        tri.v3[2] = z;
+                        vertices_found = true;
+                    }
+                    vertices_read++;
                 }
-
-                // Assign to the appropriate vertex in the triangle
-                if (vertexCount % 3 == 0)
-                    std::copy(std::initializer_list<double>{x, y, z}.begin(), std::initializer_list<double>{x, y, z}.end(), currentTriangle.v1);
-                else if (vertexCount % 3 == 1)
-                    std::copy(std::initializer_list<double>{x, y, z}.begin(), std::initializer_list<double>{x, y, z}.end(), currentTriangle.v2);
-                else
-                {
-                    std::copy(std::initializer_list<double>{x, y, z}.begin(), std::initializer_list<double>{x, y, z}.end(), currentTriangle.v3);
-                    triangles.push_back(currentTriangle);
-                }
-                vertexCount++;
             }
-            else if (line.substr(0, 10) == "endsolid")
+
+            // Break after reading the endfacet line
+            if (line.find("endfacet") != std::string::npos)
             {
-                // End of solid, break if we've found any triangles
-                if (!triangles.empty())
-                    break;
+                break;
             }
         }
-    }
-    else
-    {
-        // Process binary STL file
-        file.seekg(80, std::ios::beg); // Skip header
 
-        uint32_t triangleCount;
-        file.read(reinterpret_cast<char *>(&triangleCount), sizeof(uint32_t));
-        // Reserve space for all triangles
-        triangles.reserve(triangleCount);
-
-        // Binary STL format: normal (12 bytes) + 3 vertices (36 bytes) + attribute (2 bytes) = 50 bytes per triangle
-        for (uint32_t i = 0; i < triangleCount; i++)
+        if (vertices_found)
         {
-            float normal[3];
-            file.read(reinterpret_cast<char *>(normal), 12); // Skip normal vector
-
-            Triangle tri;
-            file.read(reinterpret_cast<char *>(tri.v1), 12);
-            file.read(reinterpret_cast<char *>(tri.v2), 12);
-            file.read(reinterpret_cast<char *>(tri.v3), 12);
-
-            // Skip attribute byte count
-            uint16_t attributeByteCount;
-            file.read(reinterpret_cast<char *>(&attributeByteCount), 2);
-
             triangles.push_back(tri);
+        }
+        else
+        {
+            std::cerr << "Warning: Incomplete triangle in STL file" << std::endl;
         }
     }
 
     file.close();
 
-    std::cout << "Loaded " << triangles.size() << " triangles from STL file" << std::endl;
+    // Debug: Print total number of triangles read
+    std::cout << "Read " << triangles.size() << " triangles from STL file" << std::endl;
 
     return triangles;
 }
@@ -147,110 +126,239 @@ void calculateBoundingBox(const std::vector<Triangle> &triangles, double &min_x,
               << max_x << ", " << max_y << ", " << max_z << ")" << std::endl;
 }
 
-// Enhanced method to translate and scale the STL model with validation
+// Function to translate and scale the STL model
 void translateAndScaleSTL(std::vector<Triangle> &triangles, double translate_x, double translate_y, double translate_z, double scale_factor)
 {
-    // Validate scale factor (prevent zero or negative scaling)
-    if (scale_factor <= 0.0)
-    {
-        std::cerr << "Warning: Invalid scale factor (" << scale_factor << "). Using absolute value." << std::endl;
-        scale_factor = std::abs(scale_factor);
-        if (scale_factor < 1e-6)
-            scale_factor = 1e-6;
-    }
-
-    // Process each triangle
+    // First scale, then translate for better numerical precision
     for (auto &tri : triangles)
     {
-        // Process each vertex
-        for (int i = 0; i < 3; ++i)
-        {
-            double *vertex = (i == 0) ? tri.v1 : (i == 1) ? tri.v2
-                                                          : tri.v3;
+        // Scale first
+        tri.v1[0] *= scale_factor;
+        tri.v2[0] *= scale_factor;
+        tri.v3[0] *= scale_factor;
+        tri.v1[1] *= scale_factor;
+        tri.v2[1] *= scale_factor;
+        tri.v3[1] *= scale_factor;
+        tri.v1[2] *= scale_factor;
+        tri.v2[2] *= scale_factor;
+        tri.v3[2] *= scale_factor;
 
-            // Translate and scale coordinates
-            vertex[0] = (vertex[0] + translate_x) * scale_factor;
-            vertex[1] = (vertex[1] + translate_y) * scale_factor;
-            vertex[2] = (vertex[2] + translate_z) * scale_factor;
+        // Then translate
+        tri.v1[0] += translate_x;
+        tri.v2[0] += translate_x;
+        tri.v3[0] += translate_x;
+        tri.v1[1] += translate_y;
+        tri.v2[1] += translate_y;
+        tri.v3[1] += translate_y;
+        tri.v1[2] += translate_z;
+        tri.v2[2] += translate_z;
+        tri.v3[2] += translate_z;
+    }
+}
+
+// Function to preprocess the STL to ensure it's watertight
+void preprocessSTL(std::vector<Triangle> &triangles, double tolerance = 1e-6)
+{
+    // Build a map of vertices to detect and merge nearby vertices
+    std::map<std::tuple<int, int, int>, std::vector<double>> vertices;
+
+    for (auto &tri : triangles)
+    {
+        // Process each vertex of the triangle
+        for (int v = 0; v < 3; v++)
+        {
+            double *vertex = (v == 0) ? tri.v1 : ((v == 1) ? tri.v2 : tri.v3);
+
+            // Quantize the vertex coordinates to detect nearby vertices
+            int quant_x = static_cast<int>(vertex[0] / tolerance);
+            int quant_y = static_cast<int>(vertex[1] / tolerance);
+            int quant_z = static_cast<int>(vertex[2] / tolerance);
+
+            auto key = std::make_tuple(quant_x, quant_y, quant_z);
+
+            // Store the vertex or update it to a previously found nearby vertex
+            if (vertices.find(key) != vertices.end())
+            {
+                // Use the existing vertex
+                vertex[0] = vertices[key][0];
+                vertex[1] = vertices[key][1];
+                vertex[2] = vertices[key][2];
+            }
+            else
+            {
+                // Store this vertex
+                vertices[key] = {vertex[0], vertex[1], vertex[2]};
+            }
         }
     }
 
-    std::cout << "STL model translated by (" << translate_x << ", " << translate_y << ", "
-              << translate_z << ") and scaled by " << scale_factor << std::endl;
+    std::cout << "Preprocessed STL: Merged vertices within tolerance " << tolerance << std::endl;
+    std::cout << "Original unique vertices: " << triangles.size() * 3 << std::endl;
+    std::cout << "After preprocessing: " << vertices.size() << " unique vertices" << std::endl;
 }
 
-// Enhanced method to check if a point is inside the solid (ray casting algorithm)
+// Improved point-in-solid test with multiple rays for robustness
 bool pointInSolid(const double p[3], const std::vector<Triangle> &triangles)
 {
-    // Early return if no triangles
-    if (triangles.empty())
+    // Cast multiple rays in different directions for robustness
+    const int NUM_RAYS = 3;
+    double rays[NUM_RAYS][3] = {
+        {1.0, 0.0, 0.0}, // X-axis
+        {0.0, 1.0, 0.0}, // Y-axis
+        {0.0, 0.0, 1.0}  // Z-axis
+    };
+
+    int vote = 0;
+
+    for (int r = 0; r < NUM_RAYS; r++)
     {
-        return false;
+        int intersections = 0;
+        double ray[3] = {rays[r][0], rays[r][1], rays[r][2]};
+
+        for (const auto &tri : triangles)
+        {
+            double edge1[3] = {tri.v2[0] - tri.v1[0], tri.v2[1] - tri.v1[1], tri.v2[2] - tri.v1[2]};
+            double edge2[3] = {tri.v3[0] - tri.v1[0], tri.v3[1] - tri.v1[1], tri.v3[2] - tri.v1[2]};
+            double h[3], s[3], q[3];
+            double a, f, u, v;
+
+            // Cross product of ray direction and edge2
+            h[0] = ray[1] * edge2[2] - ray[2] * edge2[1];
+            h[1] = ray[2] * edge2[0] - ray[0] * edge2[2];
+            h[2] = ray[0] * edge2[1] - ray[1] * edge2[0];
+
+            // Dot product of edge1 and h
+            a = edge1[0] * h[0] + edge1[1] * h[1] + edge1[2] * h[2];
+
+            // Threshold for parallelism increased for numerical stability
+            const double EPSILON = 1e-6;
+            if (a > -EPSILON && a < EPSILON)
+                continue; // Ray is parallel to the triangle
+
+            f = 1.0 / a;
+            s[0] = p[0] - tri.v1[0];
+            s[1] = p[1] - tri.v1[1];
+            s[2] = p[2] - tri.v1[2];
+
+            u = f * (s[0] * h[0] + s[1] * h[1] + s[2] * h[2]);
+            if (u < 0.0 || u > 1.0)
+                continue;
+
+            q[0] = s[1] * edge1[2] - s[2] * edge1[1];
+            q[1] = s[2] * edge1[0] - s[0] * edge1[2];
+            q[2] = s[0] * edge1[1] - s[1] * edge1[0];
+
+            v = f * (ray[0] * q[0] + ray[1] * q[1] + ray[2] * q[2]);
+            if (v < 0.0 || u + v > 1.0)
+                continue;
+
+            double t = f * (edge2[0] * q[0] + edge2[1] * q[1] + edge2[2] * q[2]);
+            if (t > EPSILON) // Valid intersection with increased threshold
+                intersections++;
+        }
+
+        // Majority vote (odd number of intersections means inside)
+        if (intersections % 2 == 1)
+            vote++;
     }
 
-    // Use a more robust direction for the ray
-    const double ray[3] = {1.0, 0.1, 0.1}; // Slightly off-axis to avoid edge cases
-    int intersections = 0;
-    double eps = 1e-8;
+    // Point is inside if majority of rays indicate inside
+    return vote > NUM_RAYS / 2;
+}
 
-    for (const auto &tri : triangles)
+// Function to fill small holes in the mask
+void fillSmallHoles(std::vector<std::vector<std::vector<int>>> &mask, int nx, int ny, int nz)
+{
+    // Create a copy of the original mask
+    auto original_mask = mask;
+
+    // Fill holes: if a fluid cell has 5 or 6 solid neighbors, make it solid
+    for (int k = 1; k < nz - 1; ++k)
     {
-        // Edge vectors
-        double edge1[3] = {tri.v2[0] - tri.v1[0], tri.v2[1] - tri.v1[1], tri.v2[2] - tri.v1[2]};
-        double edge2[3] = {tri.v3[0] - tri.v1[0], tri.v3[1] - tri.v1[1], tri.v3[2] - tri.v1[2]};
+        for (int j = 1; j < ny - 1; ++j)
+        {
+            for (int i = 1; i < nx - 1; ++i)
+            {
+                if (original_mask[k][j][i] == 1)
+                { // If it's a fluid cell
+                    int solid_neighbors =
+                        (original_mask[k + 1][j][i] == 0 ? 1 : 0) +
+                        (original_mask[k - 1][j][i] == 0 ? 1 : 0) +
+                        (original_mask[k][j + 1][i] == 0 ? 1 : 0) +
+                        (original_mask[k][j - 1][i] == 0 ? 1 : 0) +
+                        (original_mask[k][j][i + 1] == 0 ? 1 : 0) +
+                        (original_mask[k][j][i - 1] == 0 ? 1 : 0);
 
-        // Begin Möller–Trumbore algorithm
-        double h[3], s[3], q[3];
-        double a, f, u, v, t;
-
-        // Calculate h = ray × edge2
-        h[0] = ray[1] * edge2[2] - ray[2] * edge2[1];
-        h[1] = ray[2] * edge2[0] - ray[0] * edge2[2];
-        h[2] = ray[0] * edge2[1] - ray[1] * edge2[0];
-
-        // Calculate a = edge1 · h
-        a = edge1[0] * h[0] + edge1[1] * h[1] + edge1[2] * h[2];
-
-        // If ray is parallel to triangle (a is close to 0)
-        if (a > -eps && a < eps)
-            continue;
-
-        f = 1.0 / a;
-
-        // Calculate s = p - v1
-        s[0] = p[0] - tri.v1[0];
-        s[1] = p[1] - tri.v1[1];
-        s[2] = p[2] - tri.v1[2];
-
-        // Calculate u = f * (s · h)
-        u = f * (s[0] * h[0] + s[1] * h[1] + s[2] * h[2]);
-
-        // If u is outside the triangle
-        if (u < 0.0 || u > 1.0)
-            continue;
-
-        // Calculate q = s × edge1
-        q[0] = s[1] * edge1[2] - s[2] * edge1[1];
-        q[1] = s[2] * edge1[0] - s[0] * edge1[2];
-        q[2] = s[0] * edge1[1] - s[1] * edge1[0];
-
-        // Calculate v = f * (ray · q)
-        v = f * (ray[0] * q[0] + ray[1] * q[1] + ray[2] * q[2]);
-
-        // If v is outside the triangle or u+v > 1
-        if (v < 0.0 || u + v > 1.0)
-            continue;
-
-        // Calculate t = f * (edge2 · q)
-        t = f * (edge2[0] * q[0] + edge2[1] * q[1] + edge2[2] * q[2]);
-
-        // If intersection is in positive ray direction and not too close to the origin
-        if (t > eps)
-            intersections++;
+                    if (solid_neighbors >= 5)
+                    {
+                        mask[k][j][i] = 0; // Convert to solid
+                    }
+                }
+            }
+        }
     }
 
-    // Odd number of intersections means the point is inside
-    return (intersections % 2) == 1;
+    // Count how many cells were filled
+    int filled_cells = 0;
+    for (int k = 0; k < nz; ++k)
+    {
+        for (int j = 0; j < ny; ++j)
+        {
+            for (int i = 0; i < nx; ++i)
+            {
+                if (original_mask[k][j][i] == 1 && mask[k][j][i] == 0)
+                {
+                    filled_cells++;
+                }
+            }
+        }
+    }
+
+    std::cout << "Filled " << filled_cells << " small holes to improve model connectivity." << std::endl;
+}
+
+// Function to voxelize the STL model
+void voxelizeSTL(const std::vector<Triangle> &triangles, int nx, int ny, int nz,
+                 double Lx, double Ly, double Lz, std::vector<std::vector<std::vector<int>>> &mask)
+{
+    double dx = Lx / (nx - 1);
+    double dy = Ly / (ny - 1);
+    double dz = Lz / (nz - 1);
+
+    // Initialize all cells as fluid
+    mask.resize(nz, std::vector<std::vector<int>>(ny, std::vector<int>(nx, 1)));
+
+    // Count solid cells
+    int solid_cells = 0;
+
+// Voxelize the STL model
+#pragma omp parallel for reduction(+ : solid_cells) collapse(3)
+    for (int k = 0; k < nz; ++k)
+    {
+        for (int j = 0; j < ny; ++j)
+        {
+            for (int i = 0; i < nx; ++i)
+            {
+                double x = i * dx;
+                double y = j * dy;
+                double z = k * dz;
+
+                // For each grid point, check if it's inside the STL model
+                double p[3] = {x, y, z};
+                if (pointInSolid(p, triangles))
+                {
+                    mask[k][j][i] = 0; // Mark as solid
+                    solid_cells++;
+                }
+            }
+        }
+    }
+
+    std::cout << "Voxelization complete. " << solid_cells << " solid cells ("
+              << (double)solid_cells / (nx * ny * nz) * 100.0 << "% of domain)" << std::endl;
+
+    // Post-process: fill small holes to ensure connectivity
+    fillSmallHoles(mask, nx, ny, nz);
 }
 
 // Enum for shape types
@@ -319,7 +427,8 @@ public:
     NavierStokesSolver3D(
         std::tuple<double, double, double> domain_size = {10.0, 10.0, 10.0},
         std::function<bool(double, double, double)> isSolid = [](double x, double y, double z)
-        { return false; }, // Default: no solid
+        { return false; },                           // Default: no solid
+        const std::vector<Triangle> &triangles = {}, // New parameter for STL triangles
         int nx = 101, int ny = 101, int nz = 101,
         double reynolds = 100.0,
         double dt = 0.01,
@@ -354,10 +463,18 @@ public:
         u_prev.resize(nz, std::vector<std::vector<double>>(ny, std::vector<double>(nx, 0.0)));
         v_prev.resize(nz, std::vector<std::vector<double>>(ny, std::vector<double>(nx, 0.0)));
         w_prev.resize(nz, std::vector<std::vector<double>>(ny, std::vector<double>(nx, 0.0)));
-        mask.resize(nz, std::vector<std::vector<int>>(ny, std::vector<int>(nx, 1)));
 
-        // Set up the mask based on the user-defined shape
-        setupMask();
+        // If triangles were provided, use voxelization
+        if (!triangles.empty())
+        {
+            voxelizeSTL(triangles, nx, ny, nz, Lx, Ly, Lz, mask);
+        }
+        else
+        {
+            // Otherwise use the function-based approach
+            mask.resize(nz, std::vector<std::vector<int>>(ny, std::vector<int>(nx, 1)));
+            setupMask();
+        }
 
         // Set initial boundary conditions
         for (int k = 0; k < nz; ++k)
@@ -378,8 +495,7 @@ public:
             {
                 for (int i = 0; i < nx; ++i)
                 {
-                    double p[3] = {x[i], y[j], z[k]};
-                    if (isSolid(p[0], p[1], p[2]))
+                    if (isSolid(x[i], y[j], z[k]))
                     {
                         mask[k][j][i] = 0;
                         solid_cells++;
@@ -387,7 +503,6 @@ public:
                 }
             }
         }
-        // Debug: Print the number of solid cells
         std::cout << "Solid Cells: " << solid_cells << std::endl;
     }
 
@@ -639,7 +754,7 @@ public:
             }
         }
 
-// Sphere boundary: enforce zero velocity inside and on the sphere
+// Solid boundary: enforce zero velocity inside and on the solid
 #pragma omp parallel for collapse(3)
         for (int k = 0; k < nz; ++k)
         {
@@ -660,9 +775,9 @@ public:
 
     void saveToVTK(int step)
     {
-        // Create a VTK file for the current step
         std::string filename = "output/step_" + std::to_string(step) + ".vtk";
         std::ofstream file(filename);
+        file << std::scientific << std::setprecision(6);
 
         if (!file.is_open())
         {
@@ -671,12 +786,12 @@ public:
         }
 
         // VTK header
-        file << "# vtk DataFile Version 3.0" << std::endl;
-        file << "Navier-Stokes solution at step " << step << std::endl;
-        file << "ASCII" << std::endl;
-        file << "DATASET STRUCTURED_GRID" << std::endl;
-        file << "DIMENSIONS " << nx << " " << ny << " " << nz << std::endl;
-        file << "POINTS " << nx * ny * nz << " float" << std::endl;
+        file << "# vtk DataFile Version 3.0\n";
+        file << "Navier-Stokes solution at step " << step << "\n";
+        file << "ASCII\n";
+        file << "DATASET STRUCTURED_GRID\n";
+        file << "DIMENSIONS " << nx << " " << ny << " " << nz << "\n";
+        file << "POINTS " << nx * ny * nz << " float\n";
 
         // Write point coordinates
         for (int k = 0; k < nz; ++k)
@@ -685,49 +800,51 @@ public:
             {
                 for (int i = 0; i < nx; ++i)
                 {
-                    file << x[i] << " " << y[j] << " " << z[k] << std::endl;
+                    file << x[i] << " " << y[j] << " " << z[k] << "\n";
                 }
             }
         }
 
-        // Write pressure field
-        file << "POINT_DATA " << nx * ny * nz << std::endl;
-        file << "SCALARS pressure float 1" << std::endl;
-        file << "LOOKUP_TABLE default" << std::endl;
+        // Write data fields
+        file << "POINT_DATA " << nx * ny * nz << "\n";
+
+        // Pressure
+        file << "SCALARS pressure float 1\n";
+        file << "LOOKUP_TABLE default\n";
         for (int k = 0; k < nz; ++k)
         {
             for (int j = 0; j < ny; ++j)
             {
                 for (int i = 0; i < nx; ++i)
                 {
-                    file << p[k][j][i] << std::endl;
+                    file << p[k][j][i] << "\n";
                 }
             }
         }
 
-        // Write velocity field as vectors
-        file << "VECTORS velocity float" << std::endl;
+        // Velocity
+        file << "VECTORS velocity float\n";
         for (int k = 0; k < nz; ++k)
         {
             for (int j = 0; j < ny; ++j)
             {
                 for (int i = 0; i < nx; ++i)
                 {
-                    file << u[k][j][i] << " " << v[k][j][i] << " " << w[k][j][i] << std::endl;
+                    file << u[k][j][i] << " " << v[k][j][i] << " " << w[k][j][i] << "\n";
                 }
             }
         }
 
-        // Write mask field
-        file << "SCALARS mask float 1" << std::endl;
-        file << "LOOKUP_TABLE default" << std::endl;
+        // Mask
+        file << "SCALARS mask int 1\n";
+        file << "LOOKUP_TABLE default\n";
         for (int k = 0; k < nz; ++k)
         {
             for (int j = 0; j < ny; ++j)
             {
                 for (int i = 0; i < nx; ++i)
                 {
-                    file << mask[k][j][i] << std::endl;
+                    file << mask[k][j][i] << "\n";
                 }
             }
         }
@@ -808,6 +925,26 @@ public:
         {
             solveStep();
 
+            double max_u = 0.0, max_v = 0.0, max_w = 0.0;
+            for (int k = 0; k < nz; ++k)
+            {
+                for (int j = 0; j < ny; ++j)
+                {
+                    for (int i = 0; i < nx; ++i)
+                    {
+                        max_u = std::max(max_u, std::abs(u[k][j][i]));
+                        max_v = std::max(max_v, std::abs(v[k][j][i]));
+                        max_w = std::max(max_w, std::abs(w[k][j][i]));
+                    }
+                }
+            }
+
+            double cfl = dt * (max_u / dx + max_v / dy + max_w / dz);
+            if (cfl > 1.0)
+            {
+                std::cerr << "Warning: CFL condition violated (CFL = " << cfl << ")" << std::endl;
+            }
+
             // Save results at specified intervals
             if (step % plot_interval == 0 || step == num_steps)
             {
@@ -831,7 +968,7 @@ public:
     {
         double drag_force = 0.0;
 
-        // Sum pressure forces on the sphere (only consider cells adjacent to the sphere)
+        // Sum pressure forces on the solid (only consider cells adjacent to the solid)
         for (int k = 1; k < nz - 1; ++k)
         {
             for (int j = 1; j < ny - 1; ++j)
@@ -899,9 +1036,9 @@ int main(int argc, char *argv[])
     // Define simulation parameters
     std::tuple<double, double, double> domain_size = {10.0, 5.0, 5.0}; // Cuboid dimensions
     int nx = 101, ny = 51, nz = 51;                                    // Grid resolution
-    double reynolds = 150.0;                                           // Reynolds number
-    double dt = 0.005;                                                 // Time step
-    int num_steps = 10000;                                             // Number of simulation steps
+    double reynolds = 300.0;                                           // Reynolds number
+    double dt = 0.01;                                                  // Time step
+    int num_steps = 5000;                                              // Number of simulation steps
     int plot_interval = 200;                                           // Plotting interval
     int max_iter = 5000;                                               // Maximum iterations for pressure solver
     double tol = 1e-5;                                                 // Convergence tolerance
@@ -913,6 +1050,7 @@ int main(int argc, char *argv[])
     std::cin >> shape_choice;
 
     std::function<bool(double, double, double)> isSolid;
+    std::vector<Triangle> triangles;
 
     if (shape_choice == 3)
     {
@@ -920,28 +1058,46 @@ int main(int argc, char *argv[])
         std::cout << "Enter the path to the STL file: ";
         std::cin >> filename;
 
-        auto triangles = readSTL(filename);
+        triangles = readSTL(filename);
+        std::cout << "Read " << triangles.size() << " triangles from STL file." << std::endl;
+
+        // Preprocess the STL to ensure it's watertight
+        preprocessSTL(triangles);
 
         // Calculate bounding box of the original STL model
         double min_x, max_x, min_y, max_y, min_z, max_z;
         calculateBoundingBox(triangles, min_x, max_x, min_y, max_y, min_z, max_z);
 
+        // Calculate model dimensions
+        double width = max_x - min_x;
+        double height = max_y - min_y;
+        double depth = max_z - min_z;
+        double max_dim = std::max(width, std::max(height, depth));
+
+        // Compute scale factor to make sure model fits in domain
+        double scale_factor = 1.0;
+        if (max_dim > 0)
+        {
+            // Scale to 1/4th of the domain size
+            scale_factor = 2.0 / max_dim;
+        }
+
         // Define the desired position (2.5, 2.5, 2.5)
         double desired_x = 2.5, desired_y = 2.5, desired_z = 2.5;
 
         // Calculate the translation vector to move the STL model to the desired position
-        double translate_x = desired_x - (max_x + min_x) / 2.0;
-        double translate_y = desired_y - (max_y + min_y) / 2.0;
-        double translate_z = desired_z - (max_z + min_z) / 2.0;
-
-        // Define the scaling factor (1/4th of the domain length in x-direction)
-        double scale_factor = 1;
+        double translate_x = desired_x - (max_x + min_x) / 2.0 * scale_factor;
+        double translate_y = desired_y - (max_y + min_y) / 2.0 * scale_factor;
+        double translate_z = desired_z - (max_z + min_z) / 2.0 * scale_factor;
 
         // Translate and scale the STL model
         translateAndScaleSTL(triangles, translate_x, translate_y, translate_z, scale_factor);
 
         // Update the bounding box after translation and scaling
         calculateBoundingBox(triangles, min_x, max_x, min_y, max_y, min_z, max_z);
+        std::cout << "After scaling and translation, new bounding box: ("
+                  << min_x << ", " << min_y << ", " << min_z << ") to ("
+                  << max_x << ", " << max_y << ", " << max_z << ")" << std::endl;
 
         // Define the solid function using the translated and scaled STL model
         isSolid = [triangles](double x, double y, double z)
@@ -961,6 +1117,7 @@ int main(int argc, char *argv[])
     NavierStokesSolver3D solver(
         domain_size,
         isSolid,
+        triangles, // Pass triangles to the solver
         nx, ny, nz,
         reynolds,
         dt,
