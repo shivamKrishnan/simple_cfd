@@ -1,6 +1,6 @@
 ```mermaid
 flowchart TD
-    A([Start]) --> B[Web Interface]
+    A([USER]) --> B[Web Interface]
     B --> C{Simulation Type?}
     C -->|2D| D[Select 2D Shape]
     C -->|3D| E[Upload STL]
@@ -12,6 +12,7 @@ flowchart TD
     I --> J{Compile Success?}
     J -->|Yes| K[Time Step Loop]
     J -->|No| L[Error Message]
+    L --> A
     K --> M[Solve Equations]
     M --> N[Pressure Step]
     N --> O[Velocity Update]
