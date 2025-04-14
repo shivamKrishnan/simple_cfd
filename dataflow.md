@@ -1,5 +1,4 @@
-```
-mermaid
+```mermaid
 flowchart TD
     A[User] -->|Input Parameters| B[Web Interface]
     B -->|Form Data| C[Server.py]
