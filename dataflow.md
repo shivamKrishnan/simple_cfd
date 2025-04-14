@@ -1,3 +1,5 @@
+```
+mermaid
 flowchart TD
     A[User] -->|Input Parameters| B[Web Interface]
     B -->|Form Data| C[Server.py]
@@ -37,3 +39,4 @@ flowchart TD
     style G fill:#ff9,stroke:#333
     style H fill:#f9f,stroke:#333
     style I fill:#bbf,stroke:#333
+```
