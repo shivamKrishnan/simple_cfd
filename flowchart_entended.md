@@ -7,17 +7,13 @@ flowchart TD
     
     %% 3D Solver Branch
     subgraph "3D Solver Pipeline"
-        ThreeD --> STL["STL Processing\n- readSTL()\n- preprocessSTL()"]
-        STL --> Voxel["Voxelization\n- pointInSolid()\n- voxelizeSTL()"]
-        Voxel --> InitCond3D["Initialize Conditions\n- setupBoundaries()\n- initializeFields()"]
+        ThreeD --> STL["STL Processing<br>- readSTL()"]
+        STL --> Voxel["Voxelization"]
+        Voxel --> InitCond3D["Initialize Conditions"]
         InitCond3D --> MainLoop3D["Main Time Stepping Loop"]
         
-        MainLoop3D --> Predictor["Predictor Step\n- computeIntermediate()"]
-        Predictor --> Pressure3D["Pressure Correction\n- pressurePoisson()"]
-        Pressure3D --> Corrector["Corrector Step\n- updateVelocities()"]
-        Corrector --> Turbulence3D["LES Turbulence Model\n- computeTurbulentViscosity()"]
-        Turbulence3D --> Forces3D["Force Computation\n- computePressureForces()\n- computeViscousForces()"]
-        Forces3D --> Output3D["Output Generation\n- saveToVTK()\n- exportSummary()"]
+        MainLoop3D --> CoreSolver3D["Core CFD Solver<br>(Pressure-Velocity Coupling)"]
+        CoreSolver3D --> Output3D["Output Generation"]
         
         %% Loop back
         Output3D -->|"t < t_end"| MainLoop3D
@@ -26,16 +22,12 @@ flowchart TD
     
     %% 2D Solver Branch
     subgraph "2D Solver Pipeline"
-        TwoD --> Shape["Shape Generation\n- setupMask()\n- 16 predefined shapes"]
-        Shape --> InitCond2D["Initialize Conditions\n- setupBoundaries()\n- initializeFields()"]
+        TwoD --> Shape["Shape Generation<br>(16 predefined shapes)"]
+        Shape --> InitCond2D["Initialize Conditions"]
         InitCond2D --> MainLoop2D["Main Time Stepping Loop"]
         
-        MainLoop2D --> AdvDiff["Advection-Diffusion\n- computeAdvection()\n- computeDiffusion()"]
-        AdvDiff --> Pressure2D["Pressure Correction\n- pressurePoisson()"]
-        Pressure2D --> Velocity["Velocity Update\n- updateVelocities()"]
-        Velocity --> Turbulence2D["Turbulence Modeling\n- computeTurbulentViscosity()"]
-        Turbulence2D --> Forces2D["Force Computation\n- computeDragCoefficient()\n- computeLift()"]
-        Forces2D --> Output2D["Output Generation\n- saveToVTK()\n- plotVelocityField()"]
+        MainLoop2D --> CoreSolver2D["Core CFD Solver<br>(Pressure-Velocity Coupling)"]
+        CoreSolver2D --> Output2D["Output Generation"]
         
         %% Loop back
         Output2D -->|"t < t_end"| MainLoop2D
@@ -43,7 +35,7 @@ flowchart TD
     end
     
     %% Final output
-    Finish3D & Finish2D --> Results["Generate Result Files\n- Summary Statistics\n- VTK Visualization Data\n- Performance Metrics"]
+    Finish3D & Finish2D --> Results["Generate Result Files"]
     
     style Start fill:#f9f9f9,stroke:#333,stroke-width:2px
     style Mode fill:#90ee90,stroke:#333
@@ -57,18 +49,10 @@ flowchart TD
     style InitCond2D fill:#e8f8f5,stroke:#333
     style MainLoop2D fill:#ffd700,stroke:#333
     style Results fill:#ffa07a,stroke:#333
-    style Predictor fill:#d4f1f9,stroke:#333
-    style Pressure3D fill:#d4f1f9,stroke:#333
-    style Corrector fill:#d4f1f9,stroke:#333
-    style Turbulence3D fill:#d4f1f9,stroke:#333
-    style Forces3D fill:#d4f1f9,stroke:#333
+    style CoreSolver3D fill:#d4f1f9,stroke:#333
     style Output3D fill:#d4f1f9,stroke:#333
     style Finish3D fill:#d4f1f9,stroke:#333
-    style AdvDiff fill:#e8f8f5,stroke:#333
-    style Pressure2D fill:#e8f8f5,stroke:#333
-    style Velocity fill:#e8f8f5,stroke:#333
-    style Turbulence2D fill:#e8f8f5,stroke:#333
-    style Forces2D fill:#e8f8f5,stroke:#333
+    style CoreSolver2D fill:#e8f8f5,stroke:#333
     style Output2D fill:#e8f8f5,stroke:#333
     style Finish2D fill:#e8f8f5,stroke:#333
     ```
