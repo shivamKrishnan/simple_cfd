@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
     A[User] -->|Sets Parameters| B["Web Interface<br>(HTML/CSS/JS)"]
     B -->|POST Request| C["Flask Server<br>(server.py)"]
@@ -46,3 +47,4 @@ flowchart TD
         L
     end
     style Post-Processing fill:#fffacd,stroke:#333,stroke-dasharray:3 3
+```
